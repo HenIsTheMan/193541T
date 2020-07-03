@@ -76,7 +76,7 @@ void Cam::SetTarget(const glm::vec3& newTarget){
 //pos.z = (float)cos(glfwGetTime()) * radius;
 
 //lightPos.x = 1.0f + sin(glfwGetTime()) * 2.0f;
-//lightPos.y = sin(glfwGetTime() / 2.0f) * 1.0f;
+//lightPos.y = sin(glfwGetTime() / 2.0f);
 
 //PTZ, ARC, FOLLOWING, TRACKING
 

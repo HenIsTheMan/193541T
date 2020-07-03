@@ -11,12 +11,12 @@ uniform float magnitude;
 uniform float time;
 
 vec4 Explode(vec4 pos, vec3 normal){
-    vec3 direction = normal * ((sin(time) + 1.f) / 2.f) * magnitude; 
-    return pos + vec4(direction, 0.f);
+    vec3 dir = normal * ((sin(time) + 1.f) / 2.f) * magnitude; //Range of ((sin(time) + 1.f) / 2.f): [0, 1]
+    return pos + vec4(dir, 0.f);
 }
 
 vec3 GetNormal(){
-    return normalize(cross(vec3(gl_in[0].gl_Position) - vec3(gl_in[1].gl_Position), vec3(gl_in[2].gl_Position) - vec3(gl_in[1].gl_Position)));
+    return normalize(cross(vec3(gl_in[0].gl_Position) - vec3(gl_in[1].gl_Position), vec3(gl_in[2].gl_Position) - vec3(gl_in[1].gl_Position))); //Order matters
 }
 
 void main(){

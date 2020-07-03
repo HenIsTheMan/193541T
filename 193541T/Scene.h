@@ -20,8 +20,8 @@ class Scene final{
         "Resources/Textures/Skybox/Front.jpg",
         "Resources/Textures/Skybox/Back.jpg"
     };
-	Mesh* meshes[3];
-    Model* models[2];
+	Mesh* meshes[4];
+    Model* models[4];
 	ShaderChief* basicSC;
 	ShaderChief* outlineSC;
 	ShaderChief* quadSC;
@@ -29,10 +29,13 @@ class Scene final{
 	ShaderChief* cubemapSC;
 	ShaderChief* ptSC;
 	ShaderChief* normalsSC;
+	ShaderChief* instancingSC;
+	ShaderChief* instancing2SC;
     uint cubemapRefID;
     const std::vector<Vertex> LoadQuadVertices() const;
     const std::vector<Vertex> LoadCubeVertices() const;
     const std::vector<Vertex> LoadPtVertices() const;
+    const std::vector<Vertex> LoadQuadVertices2() const;
     const uint CreateCubemap(const std::vector<cstr>&) const;
     void DrawInstance(const Cam&, const glm::vec3&, const glm::vec3&) const;
     void RenderShiny(const Cam&, const glm::vec3&, const glm::vec3&, bool) const;

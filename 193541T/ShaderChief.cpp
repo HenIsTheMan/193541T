@@ -85,6 +85,15 @@ void ShaderChief::SetUniMtx4fv(cstr uniName, float* address, bool warn){
 	}
 }
 
+void ShaderChief::SetUni2f(cstr uniName, float value1, float value2, bool warn){
+	int uniLocation = glGetUniformLocation(currID, uniName); //Query location of uniform
+	if(uniLocation != -1){
+		glUniform2f(uniLocation, value1, value2); //Sets uniform on the currently active shader prog
+	} else if(warn){
+		printf("%s: Failed to find '%s'\n", std::to_string(currID).c_str(), uniName);
+	}
+}
+
 void ShaderChief::SetUni3f(cstr uniName, float value1, float value2, float value3, bool warn){
 	int uniLocation = glGetUniformLocation(currID, uniName); //Query location of uniform
 	if(uniLocation != -1){

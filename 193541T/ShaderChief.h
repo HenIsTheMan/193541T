@@ -16,6 +16,7 @@ public:
 	///Utility functions
 	static void SetUni1f(cstr, float, bool = 1);
 	static void SetUniMtx4fv(cstr, float*, bool = 1);
+	static void SetUni2f(cstr, float, float, bool = 1);
 	static void SetUni3f(cstr, float, float, float, bool = 1);
 	static void SetUni4f(cstr, float[4], bool = 1);
 	static void SetUni1i(cstr, int, bool = 1);

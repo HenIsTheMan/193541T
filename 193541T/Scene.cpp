@@ -3,8 +3,9 @@
 extern float FOV;
 
 Scene::Scene():
-	meshes{new Mesh(LoadQuadVertices(), {0, 1, 2, 0, 3, 1}), new Mesh(LoadCubeVertices(), {0}), new Mesh(LoadPtVertices(), {0})},
-    models{new Model("Resources/Models/Aloe_plant_SF.obj"), new Model("Resources/Models/nanosuit.obj")},
+	meshes{new Mesh(LoadQuadVertices(), {0, 1, 2, 0, 3, 1}), new Mesh(LoadCubeVertices(), {0}), new Mesh(LoadPtVertices(), {0}), new Mesh(LoadQuadVertices2(), {0, 1, 2, 0, 3, 1})},
+    models{new Model("Resources/Models/Aloe_plant_SF.obj"), new Model("Resources/Models/nanosuit.obj"),
+        new Model("Resources/Models/planet.obj"), new Model("Resources/Models/rock.obj")},
     basicSC(new ShaderChief("Resources/Shaders/Basic.vs", "Resources/Shaders/Basic.fs", "Resources/Shaders/Explosion.gs")),
     outlineSC(new ShaderChief("Resources/Shaders/Basic.vs", "Resources/Shaders/Outline.fs")),
     quadSC(new ShaderChief("Resources/Shaders/Basic.vs", "Resources/Shaders/Quad.fs")),
@@ -12,6 +13,8 @@ Scene::Scene():
     cubemapSC(new ShaderChief("Resources/Shaders/Cubemap.vs", "Resources/Shaders/Cubemap.fs")),
     ptSC(new ShaderChief("Resources/Shaders/Pt.vs", "Resources/Shaders/Outline.fs")),
     normalsSC(new ShaderChief("Resources/Shaders/Normals.vs", "Resources/Shaders/Outline.fs", "Resources/Shaders/Normals.gs")),
+    instancingSC(new ShaderChief("Resources/Shaders/Instancing.vs", "Resources/Shaders/Outline.fs")),
+    instancing2SC(new ShaderChief("Resources/Shaders/Instancing2.vs", "Resources/Shaders/Basic.fs")),
     cubemapRefID(CreateCubemap(texFaces))
 {
     meshes[0]->LoadTexture("Resources/Textures/blending_transparent_window.png", "d"); //Issues when too close to each other??
@@ -34,6 +37,7 @@ Scene::~Scene(){
     delete cubemapSC;
     delete ptSC;
     delete normalsSC;
+    delete instancingSC;
 }
 
 const std::vector<Vertex> Scene::LoadQuadVertices() const{ //Actual winding order is calculated at the rasterization stage after the vertex shader has run //Vertices are then seen from the viewer's POV
@@ -101,6 +105,15 @@ const std::vector<Vertex> Scene::LoadPtVertices() const{ //Draw 5 pts with colou
     vertices.emplace_back(Vertex(glm::vec3(0.5f, -0.5f, 0.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.f), glm::vec2(0.f, 0.f), glm::vec3(0.f, 0.f, 0.f)));
     vertices.emplace_back(Vertex(glm::vec3(-0.5f, -0.5f, 0.0f), glm::vec4(1.0f, 1.0f, 0.0f, 1.f), glm::vec2(0.f, 0.f), glm::vec3(0.f, 0.f, 0.f)));
     vertices.emplace_back(Vertex(glm::vec3(0.f, 0.f, 0.f), glm::vec4(1.f, 0.f, 1.f, 1.f), glm::vec2(0.f, 0.f), glm::vec3(0.f, 0.f, 0.f)));
+    return vertices;
+}
+
+const std::vector<Vertex> Scene::LoadQuadVertices2() const{ //2D NDC??
+    std::vector<Vertex> vertices;
+    vertices.emplace_back(Vertex(glm::vec3(-0.05f, -0.05f, 0.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.f), glm::vec2(0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
+    vertices.emplace_back(Vertex(glm::vec3(0.05f, 0.05f, 0.0f), glm::vec4(0.0f, 1.0f, 1.0f, 1.f), glm::vec2(1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
+    vertices.emplace_back(Vertex(glm::vec3(-0.05f, 0.05f, 0.0f), glm::vec4(1.0f, 0.0f, 0.0f, 1.f), glm::vec2(0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
+    vertices.emplace_back(Vertex(glm::vec3(0.05f, -0.05f, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.f), glm::vec2(1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
     return vertices;
 }
 
@@ -205,6 +218,47 @@ void Scene::RenderWindows(const Cam& cam) const{
 void Scene::RenderToCreatedFB(const Cam const& const cam, const uint* const& const enCubemap) const{ //??
     //glStencilMask(0x00); //Make outline overlap
 
+    basicSC->UseProg();
+    ShaderChief::SetUni1i("useFlatColour", 0);
+    ShaderChief::SetUni1i("emission", 0);
+    ShaderChief::SetUni1i("bump", 0);
+    ShaderChief::SetUni1i("reflection", 0);
+    glActiveTexture(GL_TEXTURE31);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapRefID);
+    ShaderChief::SetUni1i("skybox", 31);
+    SetUnis(cam, 2);
+    models[2]->Draw(1, 1);
+
+    instancing2SC->UseProg();
+    ShaderChief::SetUni1i("useFlatColour", 0);
+    ShaderChief::SetUni1i("emission", 0);
+    ShaderChief::SetUni1i("bump", 0);
+    ShaderChief::SetUni1i("reflection", 0);
+    glActiveTexture(GL_TEXTURE31);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapRefID);
+    ShaderChief::SetUni1i("skybox", 31);
+    const uint amt = 10000;
+    SetUnis(cam, 2);
+    models[3]->DrawInstanced(1, amt);
+
+    //const uint amt = 100;
+    //float radius = 15.f, offset = 2.5f;
+    //for(short i = 0; i < amt; ++i){
+    //    float angle = (float)i / (float)amt * 360.0f;
+    //    float displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset; //Multi??
+    //    SetUnis(cam, 2, glm::vec3(sin(angle) * radius + displacement, displacement * 0.4f, cos(angle) * radius + displacement),
+    //        glm::vec3((rand() % 21) / 100.0f + 0.05f), glm::vec4(0.4f, 0.6f, 0.8f, float(rand() % 360))); //transform x and z along the circle and randomly displace along circle with 'radius' in range [-offset, offset]??
+    //    models[3]->Draw(1, 1);
+    //}
+
+    //instancingSC->UseProg();
+    //ShaderChief::SetUni3f("myRGB", 1.f, 0.f, 1.f);
+    //SetUnis(cam, 0);
+    //for(short i = 0; i < 100; ++i){
+    //    //ShaderChief::SetUni2f(("offsets[" + std::to_string(i) + "]").c_str(), translations[i].x, translations[i].y);
+    //    meshes[3]->DrawInstanced(1, 100);
+    //}
+
     //basicSC->UseProg();
     //ShaderChief::SetUni1i("useFlatColour", 1);
     //SetUnis(cam, 0);
@@ -215,28 +269,28 @@ void Scene::RenderToCreatedFB(const Cam const& const cam, const uint* const& con
 
     //++ DrawQuads(...) and DrawCubes(...)
 
-    if(enCubemap){
-        basicSC->UseProg();
-        ShaderChief::SetUni1f("magnitude", 0.f);
-        ShaderChief::SetUni1f("time", glfwGetTime());
-        ShaderChief::SetUni1i("useFlatColour", 0);
+    //if(enCubemap){
+    //    basicSC->UseProg();
+    //    ShaderChief::SetUni1f("magnitude", 2.f);
+    //    ShaderChief::SetUni1f("time", glfwGetTime());
+    //    ShaderChief::SetUni1i("useFlatColour", 0);
 
-        ShaderChief::SetUni1i("emission", 0);
-        ShaderChief::SetUni1i("bump", 0);
-        ShaderChief::SetUni1i("reflection", 1);
-        glActiveTexture(GL_TEXTURE31);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, *enCubemap);
-        ShaderChief::SetUni1i("skybox", 31);
-        SetUnis(cam, 2);
-        models[1]->Draw(1, 1);
-        //SetUnis(cam, 2);
-        //meshes[1]->Draw(0, 1);
+    //    ShaderChief::SetUni1i("emission", 0);
+    //    ShaderChief::SetUni1i("bump", 0);
+    //    ShaderChief::SetUni1i("reflection", 0);
+    //    glActiveTexture(GL_TEXTURE31);
+    //    glBindTexture(GL_TEXTURE_CUBE_MAP, *enCubemap);
+    //    ShaderChief::SetUni1i("skybox", 31);
+    //    SetUnis(cam, 2);
+    //    models[1]->Draw(1, 1);
+    //    //SetUnis(cam, 2);
+    //    //meshes[1]->Draw(0, 1);
 
-        normalsSC->UseProg();
-        ShaderChief::SetUni3f("myRGB", 1.f, 1.f, 0.f);
-        SetUnis(cam, 0);
-        models[1]->Draw(1, 0);
-    }
+    //    //normalsSC->UseProg(); //Can use to add fur //Wrong normals due to incorrectly loading vertex data, improperly specifying vertex attributes or incorrectly managing them in the shaders
+    //    //ShaderChief::SetUni3f("myRGB", 1.f, 1.f, 0.f);
+    //    //SetUnis(cam, 0);
+    //    //models[1]->Draw(1, 0);
+    //}
 
     //for(short i = 0; i < sizeof(quadPos) / sizeof(quadPos[0]); ++i){ //??
         //RenderShiny(cam, glm::vec3(0.f), glm::vec3(1.f), 0);

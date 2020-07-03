@@ -48,47 +48,60 @@ bool App::Key(int key){
     return bool(glfwGetKey(win, key));
 }
 
-void App::CreateFramebuffer(uint& FBO, uint& texColourBuffer, uint& RBO){ //Create framebuffer to get an extra target to render to
-    glGenFramebuffers(1, &FBO); //Framebuffer is a combination of render buffers stored in GPU mem
-    glBindFramebuffer(GL_FRAMEBUFFER, FBO); { //GL_READ_FRAMEBUFFER (read target) is for operations like glReadPixels and GL_DRAW_FRAMEBUFFER (write target)
-        /*The main diffs here is that we set the dimensions equal to the screen size(although this is not required) and we pass NULL as the texture's data parameter.
-        For this texture, we're only allocating memory and not actually filling it.
-        Filling the texture will happen as soon as we render to the framebuffer.
-        Also note that we do not care about any of the wrapping methods or mipmapping since we won't be needing those in most cases.*/
-
-        ///An attachment is a mem location that can act as a render buffer for the framebuffer
-        glGenTextures(1, &texColourBuffer); //Colour buffer (stores all the fragment colours: the visual output)
-        glBindTexture(GL_TEXTURE_2D, texColourBuffer); { //All rendering commands write to the tex (render output stored inside is used in the shaders)
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 800, 600, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL); //Set the tex's dimensions to win width and height and keep its data uninitialised
-            //Call glViewport again before rendering to your framebuffer if render the screen to tex of smaller or larger size??
+void App::CreateFramebuffer(uint& FBO, uint& texColourBuffer){ //Create framebuffer (combination of render buffers stored in GPU mem) to get an extra target to render to)
+    glGenFramebuffers(1, &FBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO); {
+        glGenTextures(1, &texColourBuffer);
+        glBindTexture(GL_TEXTURE_2D, texColourBuffer); {
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 800, 600, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         } glBindTexture(GL_TEXTURE_2D, 0);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texColourBuffer, 0); //Attach colour buffer tex obj to currently bound framebuffer obj //++param info?? //++more colour attachments??
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texColourBuffer, 0); //Only need colour buffer
 
-        ///Attach a depth buffer and a stencil buffer as a single tex (each 32-bit value of the tex contains 24 bits of depth info and 8 bits of stencil info)
+        if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
+            printf("Created framebuffer is not complete.\n");
+        }
+    } glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void App::CreateMultisampleFramebuffer(uint& FBO){ //MSAA uses a much larger depth or stencil buffer to determine subsample coverage after the fragment shader is run once per pixel for each primitive with vertex data interpolated to the center of each pixel //Amt of subsamples covered affects how much pixel colour mixes with curr framebuffer colour (latest clear colour if 1st draw/...)
+    glGenFramebuffers(1, &FBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO); { //GL_READ_FRAMEBUFFER (read target) is for operations like glReadPixels and GL_DRAW_FRAMEBUFFER (write target)
+        uint texColourBuffer; //Colour buffer (stores all the fragment colours: the visual output)
+        glGenTextures(1, &texColourBuffer);
+        glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, texColourBuffer); { //All rendering commands write to the tex (render output stored inside is used in the shaders)
+            //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 800, 600, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL); //Set tex's dimensions to screen size (not required) and NULL to allocate mem (data uninitialised) //Render to framebuffer to fill tex //Call glViewport again before rendering to your framebuffer if render the screen to tex of smaller or larger size??
+            glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_RGB, 800, 600, GL_TRUE); //Multisampled tex attachment //If the last argument is set to GL_TRUE, the image will use identical sample locations and the same number of subsamples for each texel??
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        } glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, texColourBuffer, 0); //Attach colour buffer tex obj to currently bound framebuffer obj //++param info?? //++more colour attachments??
+        //Colour values are stored once per pixel so colour buffer size unaffected by...
+
+        ///Attach a z-buffer/depth buffer (stores depth value of each fragment as 16, 24 or 32 bit floats, same width and height as colour buffer) and a stencil buffer as a single tex (each 32-bit value of the tex contains 24 bits of depth info and 8 bits of stencil info)
         //glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, 800, 600, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL); //Config the tex's formats to contain combined depth and stencil values
         //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, texColorBuffer, 0);
 
-        //Renderbuffer objs store render data directly in their buffer (an arr of stuff) without conversions to texture-specific formats, making them faster as a writeable storage medium
-        //Possible to read from renderbuffer objs via the slow glReadPixels which returns a specified area of pixels from the currently bound framebuffer, but not directly from the renderbuffer obj attachments themselves
-        //Renderbuffer objs often used as depth and stencil attachments as no need to sample data values in depth and stencil buffer for depth and stencil testing respectively
-        //Renderbuffer obj is used only as a framebuffer attachment while tex is a general purpose data buffer
-        //Renderbuffer obj's data is in a native format so they are fast when writing data or copying data to other buffers and with operations like switching buffers. The glfwSwapBuffers function may as well be implemented with renderbuffer objects: we simply write to a renderbuffer image, and swap to the other one at the end??
-        glGenRenderbuffers(1, &RBO);
-        glBindRenderbuffer(GL_RENDERBUFFER, RBO); {
-            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 800, 600); //Create a depth and stencil attachment renderbuffer obj //GL_DEPTH24_STENCIL8 is the internal format (determines precision) which holds a depth buffer with 24 bits and...
+        uint RBO; //RBOs store render data directly (so data in native format) in their buffer (an arr of stuff) without conversions to texture-specific formats so fast as a writeable storage medium (fast when writing or copying data to other buffers and with operations like switching buffers) //The glfwSwapBuffers function may as well be implemented with RBOs (simply write to a renderbuffer img, and swap to the other one at the end)??
+        glGenRenderbuffers(1, &RBO); //Can read from RBOs via the slow glReadPixels which returns a specified area of pixels from the currently bound framebuffer but not directly from the RBO attachments themselves
+        glBindRenderbuffer(GL_RENDERBUFFER, RBO); { //RBOs (only as a framebuffer attachment [mem location that can act as a render buffer for the framebuffer] while texs are general purpose data buffers) often used as depth and stencil attachments as no need to sample data values in depth and stencil buffer for depth and stencil testing respectively
+            glRenderbufferStorageMultisample(GL_RENDERBUFFER, 4, GL_DEPTH24_STENCIL8, 800, 600); //Config RBO's mem storage //Create a depth and stencil attachment renderbuffer obj //GL_DEPTH24_STENCIL8 is the internal format (determines precision) which holds a depth buffer with 24 bits and...
         } glBindRenderbuffer(GL_RENDERBUFFER, 0); //Unbind RBO after allocating enuf mem for it
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO); //Attach renderbuffer obj to the depth and stencil attachment of the framebuffer
+        //A vertex's depth value is interpolated to each subsample before depth testing while stencil values are stored per subsample before... so size of depth and stencil buffers rises by qty of subsamples per pixel
 
         if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){ //Verify currently bound framebuffer //++more possibilities??
-            printf("Framebuffer is not complete.\n");
-        } //All subsequent rendering operations will now render to attachments of the currently bound framebuffer
+            printf("Created multisample framebuffer is not complete.\n");
+        }
     } glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void App::Init(){
     glfwInit();
+    //glfwWindowHint(GLFW_SAMPLES, 4); //4 subsamples in a general pattern per set of screen coords of a pixel to determine pixel coverage //Better pixel coverage precision but more performance reduction with more sample pts as they cause size of... buffers to rise by...
+    //Super Sample Anti-Aliasing (SSAA, draw more fragments, sample pt in the center of each pixel determines if each pixel is influenced by any fragment shader or not) temporarily uses a much higher resolution render buffer to render to and the resolution is downsampled back to normal after the scene is rendered
+    //Result of Multisample Anti-Aliasing (MSAA) is a framebuffer with higher resolution depth or stencil buffer where primitive edges are smoother
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -128,10 +141,8 @@ void App::Init(){
     glEnable(GL_CULL_FACE);
     //glCullFace(GL_FRONT_AND_BACK);
 
-    CreateFramebuffer(frontFBO, frontTexColourBuffer, frontRBO);
-    CreateFramebuffer(backFBO, backTexColourBuffer, backRBO);
-    //Z-buffer/Depth buffer (stores depth value of each fragment as 16, 24 or 32 bit floats, same width and height as colour buffer)
-
+    CreateMultisampleFramebuffer(frontFBO);
+    CreateMultisampleFramebuffer(backFBO);
     glGenTextures(1, &enTex);
     glBindTexture(GL_TEXTURE_CUBE_MAP, enTex); {
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -143,9 +154,12 @@ void App::Init(){
             glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, 128, 128, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL); //GL_RGB8?? //GL_RGB32F??
         }
     } glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-    CreateFramebuffer(enFBO, enTexColourBuffer, enRBO);
+    CreateMultisampleFramebuffer(enFBO);
+    CreateFramebuffer(intermediateFBO, intermediateTex);
 
     glEnable(GL_PROGRAM_POINT_SIZE);
+    //glEnable(GL_MULTISAMPLE); //Enabled by default on most OpenGL drivers //Multisample buffer (stores a given amt of sample pts per pixel) for MSAA //Multisampling algs are implemented in the rasterizer (combination of all algs and processes that transform vertices of primitives into fragments, fragments are bound by screen resolution unlike vertices so there is almost nvr a 1-on-1 mapping between... and it must decide at what screen coords will each fragment of each interpolated vertex end up at) of the OpenGL drivers
+    //Poor screen resolution leads to aliasing as the limited amt of screen pixels causes some pixels to not be rendered along an edge of a fig //Colour output is stored directly in the framebuffer if pixel is fully covered and blending is disabled
 }
 
 void App::Update(){
@@ -175,7 +189,7 @@ void App::Render(const Cam& cam){
             case 4: enCam.SetTarget(glm::vec3(0.f, 0.f, 1.f)); break;
             default: enCam.SetTarget(glm::vec3(0.f, 0.f, -1.f));
         }
-        glBindFramebuffer(GL_FRAMEBUFFER, enFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, enFBO); //All subsequent rendering operations will now render to attachments of the currently bound framebuffer
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, enTex, 0); //Render to enFBO multiple times with a diff tex target each time
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
         scene->RenderToCreatedFB(enCam, 0);
@@ -188,13 +202,29 @@ void App::Render(const Cam& cam){
 
     Cam backCam(cam.GetPos(), cam.GetPos() + cam.GetPos() - cam.GetTarget());
     glBindFramebuffer(GL_FRAMEBUFFER, backFBO);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); //State-using function
     scene->RenderToCreatedFB(backCam, &enTex);
 
+    //glBindFramebuffer(GL_READ_FRAMEBUFFER, frontFBO);
+    //glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    //glBlitFramebuffer(0, 0, 800, 600, 0, 0, 800, 600, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, GL_NEAREST);
+
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, backFBO);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, intermediateFBO);
+    glBlitFramebuffer(0, 0, 800, 600, 0, 0, 800, 600, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, GL_NEAREST);
     glBindFramebuffer(GL_FRAMEBUFFER, 0); //Stop off-screen rendering by making the default framebuffer active //Unbind the framebuffer so won't accidentally render to the wrong framebuffer
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); //State-using function
-    scene->RenderToDefaultFB(backTexColourBuffer, glm::vec3(-.5f, .5f, 0.f), glm::vec3(.5f));
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    scene->RenderToDefaultFB(intermediateTex, glm::vec3(-.5f, .5f, 0.f), glm::vec3(.5f));
+
     glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-    scene->RenderToDefaultFB(frontTexColourBuffer);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, frontFBO);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, intermediateFBO);
+    glBlitFramebuffer(0, 0, 800, 600, 0, 0, 800, 600, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, GL_NEAREST);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0); //Stop off-screen rendering by making the default framebuffer active //Unbind the framebuffer so won't accidentally render to the wrong framebuffer
+    scene->RenderToDefaultFB(intermediateTex); //Some post-processing filters like edge detection will produce jagged edges as intermediateTex is a non-multisampled tex (do post-processing later or use anti-aliasing alg to correct)
     glStencilFunc(GL_ALWAYS, 1, 0xFF);
+
+    //glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+    //scene->RenderToDefaultFB(frontTexColourBuffer);
+    //glStencilFunc(GL_ALWAYS, 1, 0xFF);
 }

@@ -1,8 +1,10 @@
 #include "Model.h"
 
-Model::Model(cstr fPath){
-    directoryHead = str(fPath).substr(0, str(fPath).find_first_of('/') + 1) + "Textures/";
-    LoadModel(fPath);
+Model::Model(cstr fPath): modelPath(fPath), directoryHead(""){}
+
+void Model::Init(){
+    directoryHead = str(modelPath).substr(0, str(modelPath).find_first_of('/') + 1) + "Textures/";
+    LoadModel(modelPath);
 }
 
 void Model::LoadModel(cstr fPath){ //Load model into a DS of Assimp called a scene obj (root obj of Assimp's data interface)
@@ -76,8 +78,20 @@ void Model::LoadMaterialTextures(const aiMaterial* const& mat, std::vector<std::
     }
 }
 
-void Model::Draw(bool indexed, bool tex) const{
+void Model::Draw(bool indexed, bool tex){
+    if(directoryHead == ""){ //Init on 1st draw/...
+        Init();
+    }
     for(const auto& mesh: meshes){
         mesh.Draw(indexed, tex);
+    }
+}
+
+void Model::DrawInstanced(bool indexed, uint amt){
+    if(directoryHead == ""){ //Init on 1st draw/...
+        Init();
+    }
+    for(const auto& mesh: meshes){
+        mesh.DrawInstanced(indexed, amt);
     }
 }

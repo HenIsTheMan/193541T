@@ -15,11 +15,12 @@ class App final{
 	static float lastX, lastY;
 	static float sensitivity;
 	static bool Key(int);
-	uint frontFBO, frontTexColourBuffer, frontRBO;
-	uint backFBO, backTexColourBuffer, backRBO;
-	uint enFBO, enTexColourBuffer, enRBO;
-	uint enTex;
-	void CreateFramebuffer(uint&, uint&, uint&);
+	uint frontFBO;
+	uint backFBO;
+	uint enFBO, enTex;
+	uint intermediateFBO, intermediateTex;
+	void CreateFramebuffer(uint&, uint&);
+	void CreateMultisampleFramebuffer(uint&);
 public:
 	App();
 	~App();

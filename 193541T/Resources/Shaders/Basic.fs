@@ -102,15 +102,14 @@ void main(){ //With Phong lighting model
     for(int i = 0; i < ptLightAmt; ++i){
         result += CalcPointLight(pLights[i]);
     }
-    result *= mix(texture(skybox, reflectedRay).rgb, texture(skybox, refractedRay2nd).rgb, 0.5); //Use both vecs to index/sample cubemap //For environment mapping
-    if(emission){
-        result *= vec3(texture(material.eMap, TexCoords));
+    if(reflection){ //For environment mapping
+        result *= mix(texture(skybox, reflectedRay).rgb, texture(skybox, refractedRay2nd).rgb, 0.5) * vec3(texture(material.rMap, TexCoords));
     }
     if(bump){
         result *= vec3(texture(material.nMap, TexCoords));
     }
-    if(reflection){
-        result *= vec3(texture(material.rMap, TexCoords));
+    if(emission){
+        result *= vec3(texture(material.eMap, TexCoords));
     }
     FragColor = vec4(useFlatColour ? ourColour : result, 1.f); //texture(...) returns colour of tex at an interpolated set of texCoords
 }

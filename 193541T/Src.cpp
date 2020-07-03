@@ -4,6 +4,7 @@
 #include "Cam.h"
 
 int main(){
+    srand(uint(glfwGetTime()));
     App* app = new App;
     Cam* cam = new Cam(glm::vec3(0.f, 0.f, 5.f), glm::vec3(0.f, 0.f, 0.f));
     while(!glfwWindowShouldClose(App::win)){ //Main loop

@@ -17,6 +17,7 @@ struct Texture{
 };
 
 class Mesh{ //Single drawable entity
+    glm::vec2 translations[100];
     uint VAO, VBO, EBO; //Store ref ID
     void SetupMesh();
 public:
@@ -26,5 +27,6 @@ public:
     Mesh(std::vector<Vertex>, std::vector<uint>);
     void LoadTexture(cstr, str);
     void Draw(bool, bool) const;
-    void DrawPts(uint) const;
+    void DrawPts(uint = 1) const;
+    void DrawInstanced(bool, uint) const;
 };

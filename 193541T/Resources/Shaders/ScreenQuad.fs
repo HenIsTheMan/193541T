@@ -10,10 +10,10 @@ uniform sampler2D screenTexture;
 const float offset = 1.f / 300.f; //Customisable
 
 void main(){
-    FragColor = texture(screenTexture, fsIn.TexCoords);
+    //FragColor = texture(screenTexture, fsIn.TexCoords);
 
     ////Post-processing effects
-    //FragColor = vec4(vec3(1.f) - vec3(texture(screenTexture, fsIn.TexCoords)), 1.f); //Colour Inversion
+    FragColor = vec4(vec3(1.f) - vec3(texture(screenTexture, fsIn.TexCoords)), 1.f); //Colour Inversion
 
     ///Grayscale
     /*FragColor = texture(screenTexture, fsIn.TexCoords);
