@@ -8,8 +8,6 @@ Vertex::Vertex(const glm::vec3& newPos, const glm::vec4& newColour, const glm::v
     tangent(newTangent),
     bitangent(newBitangent){}
 
-Texture::Texture(const uint& newRefID, const str& newType): refID(newRefID), type(newType){}
-
 PointLight::PointLight(const glm::vec3& pos, const float& constant, const float& linear, const float& quadratic) noexcept{
     this->pos = pos;
     this->constant = constant;

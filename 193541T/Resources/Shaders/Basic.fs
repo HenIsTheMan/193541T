@@ -36,6 +36,10 @@ struct Spotlight{ //Positional light that shoots light rays in 1 dir, objs withi
     float cosOuterCutoff; //cos(outer cut-off angle)
 };
 
+layout (std140) uniform Settings{
+    float brightness;
+};
+
 #define maxAmtP 10
 #define maxAmtD 10
 #define maxAmtS 10
@@ -48,8 +52,10 @@ uniform Mat material;
 uniform vec3 camPos;
 uniform samplerCube cubemapSampler;
 uniform bool cubemap;
+uniform bool skydome;
 uniform bool useFlatColour;
 uniform bool emission, bump, reflection;
+uniform bool useReflectionMap;
 const float gamma = 2.2f; //Since gamma not applied again before gamma correction as sRGB texs are alr in sRGB space (perceived as linear space by the eyes as input voltage is exponentially related to brightness [closely match how humans measure brightness as brightness is also displayed with a similar inverse pow relationship??, perceived linear brightness not equals to physical...])
 
 
@@ -148,6 +154,11 @@ void main(){ //Blinn-Phong lighting/reflection/shading model (angle between half
         FragColor.rgb = pow(FragColor.rgb, vec3(gamma));
         return;
     }
+    if(skydome){
+        FragColor = texture(material.dMap, fsIn.TexCoords) * vec4(vec3(brightness), 1.f);
+        FragColor.rgb = pow(FragColor.rgb, vec3(gamma));
+        return;
+    }
     if(useFlatColour){
         FragColor = fsIn.Colour;
         return;
@@ -174,6 +185,6 @@ void main(){ //Blinn-Phong lighting/reflection/shading model (angle between half
         }
     }
     if(reflection){ //For environment mapping
-        FragColor.rgb *= texture(cubemapSampler, reflectedRay).rgb * vec3(texture(material.rMap, fsIn.TexCoords)); //texture(...) returns colour of tex at an interpolated set of texCoords
+        FragColor.rgb += texture(cubemapSampler, reflectedRay).rgb * (useReflectionMap ? vec3(texture(material.rMap, fsIn.TexCoords)) : vec3(1.f)); //texture(...) returns colour of tex at an interpolated set of texCoords
     }
 }

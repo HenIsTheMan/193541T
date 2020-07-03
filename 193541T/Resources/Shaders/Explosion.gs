@@ -16,7 +16,11 @@ out myInterface{
     vec3 FragPos;
 } gsOut;
 
-uniform float magnitude;
+layout (std140) uniform ExplosionUnis{ //std140 is the uni block layout (mem layout used by a uni block to store its content)
+    float magnitude;
+};
+//layout(std140, binding = 2) uniform example{}; //Another layout qualifier/specifier to set binding pt explicitly
+
 uniform float time;
 uniform mat4 MVP;
 

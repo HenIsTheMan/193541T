@@ -6,7 +6,7 @@ layout (location = 3) in vec3 aNormal; //Vertex normals supplied by the model (h
 layout (location = 4) in vec2 aOffset;
 layout (location = 5) in mat4 instanceMatrix;
 layout (location = 6) in vec3 aTangent;
-layout (location = 7) in vec3 aBitangent;
+layout (location = 7) in vec3 aBitangent; //???????????????????????????????
 
 out myInterface{ //Output interface block
     vec4 Colour;
@@ -26,13 +26,6 @@ uniform bool cubemap; //From Cubemap.vs
 uniform bool explosion;
 uniform bool drawNormals; //From Normals.vs
 
-/*layout (std140) uniform Matrices{ //std140 is the uni block layout (mem layout used by a uni block to store its content)
-    mat4 projection;
-    mat4 view;
-};
-uniform mat4 model;*/
-//layout(std140, binding = 2) uniform example{}; //Another layout qualifier/specifier to set binding pt explicitly
-
 void main(){
     vsOut.Colour = aColor;
     vsOut.TexCoords = aTexCoords;
@@ -40,12 +33,14 @@ void main(){
     vsOut.FragPos = vec3(model * vec4(aPos, 1.f));
 
 
-    //vec3 B = cross(N, T);??
-    ///More precise to multiply with normal matrix as only orientation of vecs matters
-    ///T and B lie on the same plane as normal map surface and align with tex axes U and V so calc them with vertices (to get edges of...) and texCoords (since in tangent space) of primitives
     vec3 T = normalize(mat3(transpose(inverse(model))) * aTangent);
-    vec3 B = normalize(mat3(transpose(inverse(model))) * aBitangent);
+    //vec3 B = normalize(mat3(transpose(inverse(model))) * aBitangent); //More precise to multiply with normal matrix as only orientation of vecs matters
     vec3 N = normalize(mat3(transpose(inverse(model))) * aNormal);
+
+    ///Gram–Schmidt process (Tangent vecs of larger meshes that share many vertices are generally avged to give smooth results which causes TBN vectors to become non-orthogonal)
+    T = normalize(T - dot(T, N) * N); //Re-orthogonalise T with respect to N
+    vec3 B = cross(N, T);
+
     TBN = mat3(T, B, N);
     //TBN = transpose(mat3(T, B, N)); //Transpose of orthogonal matrix (each axis is a perpendicular unit vec) == its inverse)
 
@@ -56,6 +51,8 @@ void main(){
         return;
     }
     if(useMat){
+        vsOut.Normal = mat3(transpose(inverse(instanceMatrix))) * aNormal;
+        vsOut.FragPos = vec3(instanceMatrix * vec4(aPos, 1.f));
         gl_Position = projection * view * instanceMatrix * vec4(aPos, 1.f);
         return;
     }

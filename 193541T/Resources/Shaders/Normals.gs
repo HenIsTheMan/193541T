@@ -1,6 +1,6 @@
 #version 330 core
-layout (triangles) in;
-layout (line_strip, max_vertices = 6) out;
+layout (triangles) in; //Takes set of vertices that form a primitive as input (so its input data from the vertex shader is always represented as arrays of vertex data even though we only have a single vertex right now??)
+layout (line_strip, max_vertices = 6) out; //Shapes are dynamically generated on the GPU with geometry shaders (better than defining shapes within vertex buffers) so good for simple repeating forms like cubes in a voxel world or grass in a field
 
 in myInterface{
     vec4 Colour;

@@ -10,10 +10,9 @@ class Model final{ //A model obj acts as a container for several mesh objs
     void Init();
     void LoadModel(cstr) const;
     void ProcessNode(aiNode*, const aiScene*) const;
-    Mesh ProcessMesh(aiMesh*, const aiScene*) const;
+    const Mesh ProcessMesh(aiMesh*, const aiScene*) const;
     void LoadMaterialTextures(const aiMaterial* const&, const std::vector<std::pair<str, str>>&) const;
 public:
     Model(cstr);
-    void Draw(bool = 1, bool = 1);
-    void DrawInstanced(bool, bool, uint = 0);
+    void Draw(const int&, const uint&, const bool&);
 };

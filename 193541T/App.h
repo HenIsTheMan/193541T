@@ -4,9 +4,11 @@
 
 class App final{
 	float lastFrame;
+	float camResetBT;
 	float cullBT;
 	float polyModeBT;
-	float camResetBT;
+	float ppeTypeBT;
+	int typePPE;
 	Scene* scene;
 	Framebuffer* frontFBO;
 	Framebuffer* backFBO;
@@ -15,7 +17,7 @@ class App final{
 	Framebuffer* enFBO;
 	Framebuffer* intermediateFBO;
 	void RenderSceneToCreatedFB(const Cam&, const Framebuffer* const&, const Framebuffer* const&, const uint* const&, const short& = 999) const;
-	void RenderSceneToDefaultFB(const Framebuffer* const&, const Framebuffer* const&, const Framebuffer* const&, const glm::vec3&& = glm::vec3(0.f), const glm::vec3&& = glm::vec3(1.f)) const;
+	void RenderSceneToDefaultFB(const Framebuffer* const&, const Framebuffer* const&, const int&, const glm::vec3&& = glm::vec3(0.f), const glm::vec3&& = glm::vec3(1.f)) const;
 public:
 	App();
 	~App();

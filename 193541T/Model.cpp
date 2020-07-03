@@ -9,7 +9,7 @@ void Model::Init(){
 
 void Model::LoadModel(cstr fPath) const{ //Load model into a DS of Assimp called a scene obj (root obj of Assimp's data interface)
     Assimp::Importer import;
-    const aiScene* scene = import.ReadFile(fPath, aiProcess_Triangulate | aiProcess_FlipUVs);
+    const aiScene* scene = import.ReadFile(fPath, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
     if(!scene || !scene->mRootNode || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE){ //If !scene || !(root node of scene) || returned data is incomplete (given by 1 of its flags)
         printf("Assimp error: %s\n", import.GetErrorString());
         return;
@@ -27,21 +27,23 @@ void Model::ProcessNode(aiNode* node, const aiScene* scene) const{ //Process all
     }
 }
 
-Mesh Model::ProcessMesh(aiMesh* meshObj, const aiScene* scene) const{
-    std::vector<Vertex> vertices;
-    std::vector<uint> indices;
+const Mesh Model::ProcessMesh(aiMesh* meshObj, const aiScene* scene) const{
+    std::vector<Vertex>* vertices = new std::vector<Vertex>;
+    std::vector<uint>* indices = new std::vector<uint>;
 
     for(uint i = 0; i < meshObj->mNumVertices; ++i){ //For each vertex of the mesh...
-        vertices.emplace_back(Vertex(
+        (*vertices).emplace_back(Vertex(
             glm::vec3(meshObj->mVertices[i].x, meshObj->mVertices[i].y, meshObj->mVertices[i].z),
             (meshObj->mColors[0] ? glm::vec4(meshObj->mColors[0][i].r, meshObj->mColors[0][i].g, meshObj->mColors[0][i].b, meshObj->mColors[0][i].a) : glm::vec4(0.f)),
             (meshObj->mTextureCoords[0] ? glm::vec2(meshObj->mTextureCoords[0][i].x, meshObj->mTextureCoords[0][i].y) : glm::vec2(0.f)), //Assimp allows a model to have 8 diff texCoords per vertex //Check if mesh has texCoords before...
-            glm::vec3(meshObj->mNormals[i].x, meshObj->mNormals[i].y, meshObj->mNormals[i].z)));
+            glm::vec3(meshObj->mNormals[i].x, meshObj->mNormals[i].y, meshObj->mNormals[i].z),
+            glm::vec3(meshObj->mTangents[i].x, meshObj->mTangents[i].y, meshObj->mTangents[i].z),
+            glm::vec3(meshObj->mBitangents[i].x, meshObj->mBitangents[i].y, meshObj->mBitangents[i].z)));
     }
     for(uint i = 0; i < meshObj->mNumFaces; ++i){ //For each face of the mesh... //Each mesh has an arr of primitive faces (triangles due to the aiProcess_Triangulate post-processing option)
         aiFace face = meshObj->mFaces[i]; //Contains indices defining which vertices to draw and in what order for each primitive //Placeholder
         for(uint j = 0; j < face.mNumIndices; ++j){
-            indices.emplace_back(face.mIndices[j]);
+            (*indices).emplace_back(face.mIndices[j]);
         }
     }
     Mesh mesh(vertices, indices);
@@ -50,14 +52,14 @@ Mesh Model::ProcessMesh(aiMesh* meshObj, const aiScene* scene) const{
         std::vector<std::pair<str, str>> texMaps;
         LoadMaterialTextures(matObj, texMaps);
         for(const auto& texMap: texMaps){
-            mesh.LoadTexture(texMap.first.c_str(), texMap.second);
+            mesh.LoadTex(texMap.first.c_str(), texMap.second, 0); //No need to flip tex as aiProcess_FlipUVs flag is set
         }
     }
     return mesh;
 }
 
 void Model::LoadMaterialTextures(const aiMaterial* const& mat, const std::vector<std::pair<str, str>>& texMaps) const{ //Helper function to retrieve the textures from the material
-    aiTextureType types[]{aiTextureType_DIFFUSE, aiTextureType_SPECULAR, aiTextureType_EMISSIVE, aiTextureType_NORMALS, aiTextureType_AMBIENT};
+    aiTextureType types[]{aiTextureType_DIFFUSE, aiTextureType_SPECULAR, aiTextureType_EMISSIVE, aiTextureType_HEIGHT, aiTextureType_AMBIENT};
     for(short i = 0; i < sizeof(types) / sizeof(types[0]); ++i){
         for(uint j = 0; j < mat->GetTextureCount(types[i]); ++j){ //For each texture in the material of the given texture type...
             aiString aiStr;
@@ -78,20 +80,16 @@ void Model::LoadMaterialTextures(const aiMaterial* const& mat, const std::vector
     }
 }
 
-void Model::Draw(bool indexed, bool tex){
+void Model::Draw(const int& primitive, const uint& instancesAmt, const bool& textured){
     if(directoryHead == ""){ //Init on 1st draw/...
         Init();
     }
     for(auto& mesh: meshes){
-        mesh.Draw(indexed, tex);
-    }
-}
-
-void Model::DrawInstanced(bool indexed, bool tex, uint amt){
-    if(directoryHead == ""){ //Init on 1st draw/...
-        Init();
-    }
-    for(auto& mesh: meshes){
-        mesh.DrawInstanced(indexed, tex, amt);
+        if(textured){
+            for(size_t i = 0; i < mesh.textures.size(); ++i){
+                mesh.textures[i].SetActiveOnMesh(1);
+            }
+        }
+        mesh.Draw(primitive, instancesAmt);
     }
 }

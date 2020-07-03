@@ -11,12 +11,6 @@ struct Vertex final{ //Can use to index each vertex attrib
     glm::vec3 bitangent;
 };
 
-struct Texture final{
-    Texture(const uint&, const str&);
-    uint refID;
-    str type;
-};
-
 struct PointLight final{
     PointLight(const glm::vec3&, const float&, const float&, const float&) noexcept;
     glm::vec3 pos;

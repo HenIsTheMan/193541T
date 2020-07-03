@@ -6,9 +6,9 @@ extern float leftRightMB;
 extern float pitch;
 extern float yaw;
 
-Cam::Cam(const glm::vec3& newPos, const glm::vec3& newTarget, const short&& newProjectionType, const float&& newAspectRatio):
-	pos(newPos), target(newTarget),
-	defaultPos(newPos), defaultTarget(newTarget),
+Cam::Cam(const glm::vec3& newPos, const glm::vec3& newTarget, const glm::vec3& newUp, const short&& newProjectionType, const float&& newAspectRatio):
+	pos(newPos), target(newTarget), up(newUp),
+	defaultPos(newPos), defaultTarget(newTarget), defaultUp(newUp),
 	projectionType(newProjectionType),
 	aspectRatio(newAspectRatio){}
 
@@ -28,17 +28,8 @@ glm::vec3 Cam::CalcFront(bool normalised) const{
 	return (normalised ? glm::normalize(target - pos) : target - pos);
 }
 
-glm::vec3 Cam::CalcRight() const{ //Prevent LookAt flip once front vec parallel to worldUp vec??
-	return glm::normalize(glm::cross(CalcFront(), {0.f, 1.f, 0.f}));
-
-	//glm::vec3 camFront = CalcFront();
-	//glm::vec3 result = glm::normalize(glm::cross(camFront, {0.f, 1.f, 0.f}));	
-	//if(result == glm::vec3(0.f)){
-	//	/*const_cast<glm::vec3&>(prevRight) = result;*/
-	//	glm::vec3 camUp = glm::cross({1.f, 0.f, 0.f}, camFront);
-	//	return glm::normalize(glm::cross(camFront, camUp));
-	//}
-	//return result;
+glm::vec3 Cam::CalcRight() const{ //LookAt flip prevented
+	return glm::normalize(glm::cross(CalcFront(), up));
 }
 
 glm::vec3 Cam::CalcUp() const{
@@ -46,7 +37,7 @@ glm::vec3 Cam::CalcUp() const{
 }
 
 void Cam::Update(const int& up, const int& down, const int& left, const int& right, const int& front, const int& back){
-	const float camSpd = 4.f * dt;
+	const float camSpd = 12.f * dt;
 	float upDown = float(App::Key(up) - App::Key(down));
 	float leftRight = float(App::Key(left) - App::Key(right));
 	float frontBack = float(App::Key(front) - App::Key(back));
@@ -57,19 +48,24 @@ void Cam::Update(const int& up, const int& down, const int& left, const int& rig
 	frontBackDir.y = 1.f;
 
 	glm::vec3&& change = glm::vec3(frontBack, upDown, frontBack) * frontBackDir + leftRight * -CalcRight() + leftRightMB * camFront;
-	change = glm::vec3(std::min(1.f, std::max(-1.f, change.x)), std::min(1.f, std::max(-1.f, change.y)), std::min(1.f, std::max(-1.f, change.z)));
+	if(change != glm::vec3(0.f)){
+		change = normalize(change);
+	}
 	pos += camSpd * change;
 	target += camSpd * change;
 
 	glm::mat4 yawPitch = glm::rotate(glm::rotate(glm::mat4(1.f), glm::radians(yaw), {0.f, 1.f, 0.f}), glm::radians(pitch), CalcRight());
 	target = pos + glm::vec3(yawPitch * glm::vec4(camFront, 0.f));
+	this->up = glm::vec3(yawPitch * glm::vec4(this->up, 0.f));
 	yaw = pitch = 0.f;
 }
 
 void Cam::Reset(){
-	projectionType = 1;
+	aspectRatio = 4.f / 3.f;
+	projectionType = 2;
 	pos = defaultPos;
 	target = defaultTarget;
+	up = defaultUp;
 }
 
 const float& Cam::GetAspectRatio() const{
@@ -88,12 +84,20 @@ const glm::vec3& Cam::GetTarget() const{
 	return target;
 }
 
+const glm::vec3& Cam::GetUp() const{
+	return up;
+}
+
 void Cam::SetPos(const glm::vec3& newPos){
 	pos = newPos;
 }
 
 void Cam::SetTarget(const glm::vec3& newTarget){
 	target = newTarget;
+}
+
+void Cam::SetUp(const glm::vec3& newUp){
+	up = newUp;
 }
 
 //const float radius = 10.0f;

@@ -10,6 +10,8 @@
 #include "stb_image.h"
 #include <algorithm>
 #include <fstream>
+#include <iostream>
+#include <unordered_map>
 #include <map>
 #include <numeric>
 #include <string>

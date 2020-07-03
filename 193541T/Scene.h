@@ -1,4 +1,5 @@
 #pragma once
+#include "Buffer.h"
 #include "Cam.h"
 #include "Mesh.h"
 #include "Model.h"
@@ -13,38 +14,36 @@ class Scene final{
         glm::vec3(0.5f, -1.5f, -1.5f)
     };
     std::vector<cstr> texFaces{
-        "Resources/Textures/Skybox/Right.jpg",
-        "Resources/Textures/Skybox/Left.jpg",
-        "Resources/Textures/Skybox/Top.jpg",
-        "Resources/Textures/Skybox/Bottom.jpg",
-        "Resources/Textures/Skybox/Front.jpg",
-        "Resources/Textures/Skybox/Back.jpg"
+        "Resources/Textures/Skyboxes/Right.png",
+        "Resources/Textures/Skyboxes/Left.png",
+        "Resources/Textures/Skyboxes/Top.png",
+        "Resources/Textures/Skyboxes/Bottom.png",
+        "Resources/Textures/Skyboxes/Front.png",
+        "Resources/Textures/Skyboxes/Back.png"
     };
-	Mesh* meshes[6];
-    Model* models[4];
+	Mesh* meshes[4];
+    Model* models[5];
 	ShaderProg* basicShaderProg;
 	ShaderProg* explosionShaderProg;
 	ShaderProg* outlineShaderProg;
 	ShaderProg* normalsShaderProg;
 	ShaderProg* quadShaderProg;
 	ShaderProg* screenQuadShaderProg;
-    ShaderProg* simpleDepthShaderProg;
-    uint cubemapRefID;
-    const std::vector<Vertex> LoadQuadVertices(const float&&) const;
-    const std::vector<Vertex> LoadCubeVertices() const;
-    const std::vector<Vertex> LoadPtVertices() const;
-    const uint CreateCubemap(const std::vector<cstr>&) const;
+    Tex cubemap;
+    UniBuffer* magnitudeStorer;
+    UniBuffer* brightnessStorer;
     void DrawInstance(const Cam&, const bool&, const glm::vec3&, const glm::vec3&) const;
     void RenderNormals(const Cam&, const bool&) const;
     void RenderStuff(const Cam&) const;
     void RenderShiny(const Cam&, const glm::vec3&, const glm::vec3&, bool) const;
-    void RenderSkybox(const Cam&) const;
+    void RenderSky(const Cam&, const bool&&) const;
     void RenderWindows(const Cam&) const;
     void SetUnis(const Cam&, short = 0, const glm::vec3& = glm::vec3(0.f), const glm::vec4& = {0.f, 1.f, 0.f, 0.f}, const glm::vec3& = glm::vec3(1.f)) const;
 public:
 	Scene();
 	~Scene();
+    void Init();
     void Update(Cam const&);
-    void RenderToCreatedFB(Cam const&, const uint* const&, const uint* const&) const;
-    void RenderToDefaultFB(const uint&, const glm::vec3& = glm::vec3(0.f), const glm::vec3& = glm::vec3(1.f)) const;
+    void RenderToCreatedFB(Cam const&, const Tex* const&, const uint* const&);
+    void RenderToDefaultFB(const Tex&, const int&, const glm::vec3& = glm::vec3(0.f), const glm::vec3& = glm::vec3(1.f)) const;
 };

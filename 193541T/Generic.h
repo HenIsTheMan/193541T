@@ -69,7 +69,6 @@ void InitGL(GLFWwindow*& win){
     glfwSetInputMode(win, GLFW_CURSOR, GLFW_CURSOR_DISABLED); //Hide and capture mouse cursor
     glfwSetMouseButtonCallback(win, MouseButtonCallback);
     glfwSetScrollCallback(win, ScrollCallback);
-    //stbi_set_flip_vertically_on_load(1); //Ensure textures are not flipped upside-down
     glClearColor(0.2f, 0.3f, 0.3f, 1.f); //State-setting function
 
     //Stencil buffer usually contains 8 bits per stencil value that amts to 256 diff stencil values per pixel
@@ -91,4 +90,5 @@ void InitGL(GLFWwindow*& win){
     //Poor screen resolution leads to aliasing as the limited amt of screen pixels causes some pixels to not be rendered along an edge of a fig //Colour output is stored directly in the framebuffer if pixel is fully covered and blending is disabled
 
     //glEnable(GL_FRAMEBUFFER_SRGB); //Colours from sRGB colour space are gamma corrected after each frag shader run before they are stored in colour buffers of all framebuffers
+    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 }
