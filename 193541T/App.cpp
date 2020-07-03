@@ -2,7 +2,6 @@
 
 bool App::firstCall = 1;
 float App::dt = 0.f;
-float App::FOV = 45.f;
 float App::pitch = 0.f;
 float App::yaw = -90.f;
 float App::lastX = 0.f;
@@ -10,11 +9,16 @@ float App::lastY = 0.f;
 float App::sensitivity = .05f;
 GLFWwindow* App::win = 0;
 
-App::App(){
+float FOV = 45.f;
+
+App::App(): polyModeBT(0.f){
     Init();
+    scene = new Scene;
 }
 
 App::~App(){
+    delete scene;
+    glDeleteFramebuffers(1, &FBO);
     glfwTerminate(); //Clean/Del all GLFW's resources that were allocated
 }
 
@@ -23,8 +27,8 @@ void FramebufferSizeCallback(GLFWwindow*, int width, int height){ //Resize callb
 }
 
 void ScrollCallback(GLFWwindow*, double xOffset, double yOffset){
-    App::FOV -= float(xOffset) + float(yOffset);
-    App::FOV = std::max(1.f, std::min(75.f, App::FOV));
+    FOV -= float(xOffset) + float(yOffset);
+    FOV = std::max(1.f, std::min(75.f, FOV));
 }
 
 void CursorPosCallback(GLFWwindow*, double xPos, double yPos){
@@ -41,6 +45,45 @@ void CursorPosCallback(GLFWwindow*, double xPos, double yPos){
 
 bool App::Key(int key){
     return bool(glfwGetKey(win, key));
+}
+
+void App::CreateFramebuffer(){ //Create framebuffer to get an extra target to render to
+    glGenFramebuffers(1, &FBO); //Framebuffer is a combination of render buffers stored in GPU mem
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO); { //GL_READ_FRAMEBUFFER (read target) is for operations like glReadPixels and GL_DRAW_FRAMEBUFFER (write target)
+        /*The main diffs here is that we set the dimensions equal to the screen size(although this is not required) and we pass NULL as the texture's data parameter.
+        For this texture, we're only allocating memory and not actually filling it.
+        Filling the texture will happen as soon as we render to the framebuffer.
+        Also note that we do not care about any of the wrapping methods or mipmapping since we won't be needing those in most cases.*/
+
+        ///An attachment is a mem location that can act as a render buffer for the framebuffer
+        glGenTextures(1, &texColourBuffer);
+        glBindTexture(GL_TEXTURE_2D, texColourBuffer); { //All rendering commands write to the tex (render output stored inside is used in the shaders)
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 800, 600, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL); //Set the tex's dimensions to win width and height and keep its data uninitialised
+            //Call glViewport again before rendering to your framebuffer if render the screen to tex of smaller or larger size??
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        } glBindTexture(GL_TEXTURE_2D, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texColourBuffer, 0); //Attach colour buffer tex obj to currently bound framebuffer obj //++param info?? //++more colour attachments??
+
+        ///Attach a depth buffer and a stencil buffer as a single tex (each 32-bit value of the tex contains 24 bits of depth info and 8 bits of stencil info)
+        //glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, 800, 600, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL); //Config the tex's formats to contain combined depth and stencil values
+        //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, texColorBuffer, 0);
+
+        //Renderbuffer objs store render data directly in their buffer (an arr of stuff) without conversions to texture-specific formats, making them faster as a writeable storage medium
+        //Possible to read from renderbuffer objs via the slow glReadPixels which returns a specified area of pixels from the currently bound framebuffer, but not directly from the renderbuffer obj attachments themselves
+        //Renderbuffer objs often used as depth and stencil attachments as no need to sample data values in depth and stencil buffer for depth and stencil testing respectively
+        //Renderbuffer obj is used only as a framebuffer attachment while tex is a general purpose data buffer
+        //Renderbuffer obj's data is in a native format so they are fast when writing data or copying data to other buffers and with operations like switching buffers. The glfwSwapBuffers function may as well be implemented with renderbuffer objects: we simply write to a renderbuffer image, and swap to the other one at the end??
+        glGenRenderbuffers(1, &RBO);
+        glBindRenderbuffer(GL_RENDERBUFFER, RBO); {
+            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 800, 600); //Create a depth and stencil attachment renderbuffer obj //GL_DEPTH24_STENCIL8 is the internal format (determines precision) which holds a depth buffer with 24 bits and...
+        } glBindRenderbuffer(GL_RENDERBUFFER, 0); //Unbind RBO after allocating enuf mem for it
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO); //Attach renderbuffer obj to the depth and stencil attachment of the framebuffer
+
+        if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){ //Verify currently bound framebuffer //++more possibilities??
+            printf("Framebuffer is not complete.\n");
+        } //All subsequent rendering operations will now render to attachments of the currently bound framebuffer
+    } glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void App::Init(){
@@ -69,8 +112,10 @@ void App::Init(){
 
     //Stencil buffer usually contains 8 bits per stencil value that amts to 256 diff stencil values per pixel
     //Use stencil buffer operations to write to the stencil buffer when rendering fragments (read stencil values in the same or following frame(s) to pass or discard fragments based on their stencil value)
-    glEnable(GL_STENCIL_TEST); //Make all render calls influence the stencil buffer //Discard fragments based on fragments of other drawn objs in the scene
-    glStencilFunc(GL_EQUAL, 1, 0xFF); //The frag passes... and is drawn if its stencil value is equal to 1 (ref value) //++params??
+    glEnable(GL_STENCIL_TEST); //Discard fragments based on fragments of other drawn objs in the scene
+    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE); //Fragments update stencil buffer with their ref value when... //++params and options??
+
+    glEnable(GL_DEPTH_TEST); //Done in screen space after the fragment shader has run and after the stencil test //(pass ? fragment is rendered and depth buffer is updated with new depth value : fragment is discarded)
 
     glEnable(GL_BLEND); //Colour resulting from blend eqn replaces prev colour stored in the colour buffer
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); //++options??
@@ -79,20 +124,31 @@ void App::Init(){
 
     glEnable(GL_CULL_FACE);
     //glCullFace(GL_FRONT_AND_BACK);
+
+    CreateFramebuffer();
+    //Colour buffer (stores all the fragment colours: the visual output)
+    //Z-buffer/Depth buffer (stores depth value of each fragment as 16, 24 or 32 bit floats, same width and height as colour buffer)
 }
 
 void App::Update(){
-    //Colour buffer (stores all the fragment colours: the visual output)
-    //Z-buffer/Depth buffer (stores depth value of each fragment as 16, 24 or 32 bit floats, has same width and height as the colour buffer)
-    glfwSetWindowShouldClose(win, glfwGetKey(win, GLFW_KEY_ESCAPE));
-    ///++bounceTime??
-    GLint polyMode;
-    glGetIntegerv(GL_POLYGON_MODE, &polyMode);
-    if(glfwGetKey(win, GLFW_KEY_2)){
-        glPolygonMode(GL_FRONT_AND_BACK, polyMode + (polyMode == GL_FILL ? -2 : 1));
-    }
-
     float currFrame = (float)glfwGetTime();
     dt = currFrame - lastFrame;
     lastFrame = currFrame;
+    glfwSetWindowShouldClose(win, glfwGetKey(win, GLFW_KEY_ESCAPE));
+    GLint polyMode;
+    glGetIntegerv(GL_POLYGON_MODE, &polyMode);
+    if(glfwGetKey(win, GLFW_KEY_2) && polyModeBT <= currFrame){
+        glPolygonMode(GL_FRONT_AND_BACK, polyMode + (polyMode == GL_FILL ? -2 : 1));
+        polyModeBT = currFrame + .5f;
+    }
+}
+
+void App::Render(const Cam& cam){
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); //Clear info from prev frame stored in each render buffer with the appropriate bits set //State-using function
+    scene->RenderToCreatedFB(cam);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0); //Stop off-screen rendering by making the default framebuffer active //Unbind the framebuffer so won't accidentally render to the wrong framebuffer
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    scene->RenderToDefaultFB(texColourBuffer);
 }

@@ -56,47 +56,47 @@ void ShaderChief::LinkProg() const{
 	}
 }
 
-void ShaderChief::SetUni1f(cstr uniName, float value){
+void ShaderChief::SetUni1f(cstr uniName, float value, bool warn){
 	int uniLocation = glGetUniformLocation(currID, uniName); //Query location of uniform
 	if(uniLocation != -1){
 		glUniform1f(uniLocation, value); //Sets uniform on the currently active shader prog
-	} else{
+	} else if(warn){
 		printf("%s: Failed to find '%s'\n", std::to_string(currID).c_str(), uniName);
 	}
 }
 
-void ShaderChief::SetUniMtx4fv(cstr uniName, float* address){
+void ShaderChief::SetUniMtx4fv(cstr uniName, float* address, bool warn){
 	int uniLocation = glGetUniformLocation(currID, uniName); //Query location of uniform
 	if(uniLocation != -1){
 		glUniformMatrix4fv(uniLocation, 1, GL_FALSE, address); //Sets uniform on the currently active shader prog
-	} else{
+	} else if(warn){
 		printf("%s: Failed to find '%s'\n", std::to_string(currID).c_str(), uniName);
 	}
 }
 
-void ShaderChief::SetUni3f(cstr uniName, float value1, float value2, float value3){
+void ShaderChief::SetUni3f(cstr uniName, float value1, float value2, float value3, bool warn){
 	int uniLocation = glGetUniformLocation(currID, uniName); //Query location of uniform
 	if(uniLocation != -1){
 		glUniform3f(uniLocation, value1, value2, value3); //Sets uniform on the currently active shader prog
-	} else{
+	} else if(warn){
 		printf("%s: Failed to find '%s'\n", std::to_string(currID).c_str(), uniName);
 	}
 }
 
-void ShaderChief::SetUni4f(cstr uniName, float values[4]){
+void ShaderChief::SetUni4f(cstr uniName, float values[4], bool warn){
 	int uniLocation = glGetUniformLocation(currID, uniName); //Query location of uniform
 	if(uniLocation != -1){
 		glUniform4f(uniLocation, values[0], values[1], values[2], values[3]); //Sets uniform on the currently active shader prog
-	} else{
+	} else if(warn){
 		printf("%s: Failed to find '%s'\n", std::to_string(currID).c_str(), uniName);
 	}
 }
 
-void ShaderChief::SetUni1i(cstr uniName, int value){
+void ShaderChief::SetUni1i(cstr uniName, int value, bool warn){
 	int uniLocation = glGetUniformLocation(currID, uniName); //Query location of uniform
 	if(uniLocation != -1){
 		glUniform1i(uniLocation, value); //Sets uniform on the currently active shader prog
-	} else{
+	} else if(warn){
 		printf("%s: Failed to find '%s'\n", std::to_string(currID).c_str(), uniName);
 	}
 }

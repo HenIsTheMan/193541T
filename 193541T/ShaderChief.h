@@ -11,11 +11,11 @@ public:
 	~ShaderChief();
 
 	///Utility functions
-	static void SetUni1f(cstr, float);
-	static void SetUniMtx4fv(cstr, float*);
-	static void SetUni3f(cstr, float, float, float);
-	static void SetUni4f(cstr, float[4]);
-	static void SetUni1i(cstr, int);
+	static void SetUni1f(cstr, float, bool = 1);
+	static void SetUniMtx4fv(cstr, float*, bool = 1);
+	static void SetUni3f(cstr, float, float, float, bool = 1);
+	static void SetUni4f(cstr, float[4], bool = 1);
+	static void SetUni1i(cstr, int, bool = 1);
 
 	void UseProg() const;
 };

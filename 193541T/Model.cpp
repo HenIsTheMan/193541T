@@ -55,7 +55,7 @@ Mesh Model::ProcessMesh(aiMesh* meshObj, const aiScene* scene){
 }
 
 void Model::LoadMaterialTextures(const aiMaterial* const mat, std::vector<std::pair<str, str>>& texMaps){ //Helper function to retrieve the textures from the material
-    aiTextureType types[]{aiTextureType_DIFFUSE, aiTextureType_SPECULAR, aiTextureType_NORMAL_CAMERA, aiTextureType_AMBIENT};
+    aiTextureType types[]{aiTextureType_DIFFUSE, aiTextureType_SPECULAR, aiTextureType_EMISSIVE, aiTextureType_NORMALS, aiTextureType_AMBIENT};
     for(short i = 0; i < sizeof(types) / sizeof(types[0]); ++i){
         for(uint j = 0; j < mat->GetTextureCount(types[i]); ++j){ //For each texture in the material of the given texture type...
             aiString aiStr;
@@ -65,8 +65,9 @@ void Model::LoadMaterialTextures(const aiMaterial* const mat, std::vector<std::p
             switch(i){
                 case 0: typeName = "d"; break;
                 case 1: typeName = "s"; break;
-                case 2: typeName = "n"; break;
-                case 3: typeName = "r";
+                case 2: typeName = "e"; break;
+                case 3: typeName = "n"; break;
+                case 4: typeName = "r";
             }
             if(!texAlrLoaded){
                 texMaps.emplace_back(std::make_pair(newFileName, typeName));

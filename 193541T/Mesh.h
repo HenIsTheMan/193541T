@@ -11,14 +11,13 @@ struct Vertex{ //Can use to index each vertex attrib
 };
 
 struct Texture{
-    Texture(short, str);
-    short texUnit;
+    Texture(uint, str);
+    uint refID;
     str type;
 };
 
 class Mesh{ //Single drawable entity
     uint VAO, VBO, EBO; //Store ref ID
-    static short nextTexUnit;
     void SetupMesh();
 public:
     std::vector<Vertex> vertices;
