@@ -53,6 +53,8 @@ public:
     static Mesh* const CreateHeightMap(cstr const&);
     static void GenHeightMapVertices(Mesh* const&, const std::vector<std::vector<float>>&, const int&, const int&);
     static void GenHeightMapIndices(Mesh* const&, const int&, const int&);
+
+    static Mesh* const CreateSlicedTexQuad(const float&, const float&, const float&);
 };
 
 //Specify vertices in CCW winding order so front faces are rendered in CW order while...

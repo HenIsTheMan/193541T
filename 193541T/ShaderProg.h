@@ -10,7 +10,7 @@ class ShaderProg final{
 	static std::unordered_map<cstr, uint> shaderCache;
 
 	uint refID;
-	static const int& GetUniLocation(cstr const&) noexcept;
+	static int GetUniLocation(cstr const&) noexcept;
 	void Init() noexcept;
 	void ParseShader(cstr const&, const uint&) const noexcept;
 	void Link() const noexcept;

@@ -19,18 +19,28 @@ out mat3 TBN;
 
 uniform mat4 MVP;
 uniform mat4 model, view, projection;
-uniform bool useOffset; //From Instancing.vs
-uniform bool useMat; //From Instancing2.vs
-uniform bool screenQuad; //From ScreenQuad.vs
-uniform bool cubemap; //From Cubemap.vs
+uniform bool useOffset;
+uniform bool useMat;
+uniform bool screenQuad;
+uniform bool cubemap;
 uniform bool explosion;
-uniform bool drawNormals; //From Normals.vs
+uniform bool drawNormals;
+uniform bool wave;
+uniform float time;
 
 void main(){
     vsOut.Colour = aColor;
     vsOut.TexCoords = aTexCoords;
     vsOut.Normal = mat3(transpose(inverse(model))) * aNormal; //Multiplication with normal matrix
     vsOut.FragPos = vec3(model * vec4(aPos, 1.f));
+    if(wave){
+		vec4 worldSpacePos = model * vec4(aPos, 1.f);
+		worldSpacePos.y += sin(worldSpacePos.x + time) * cos(worldSpacePos.z + time) * 50.f;
+		gl_Position = projection * view * worldSpacePos;
+		//vsOut.TexCoords.x += time;
+        return;
+	}
+
 
 
     vec3 T = normalize(mat3(transpose(inverse(model))) * aTangent);
@@ -43,6 +53,7 @@ void main(){
 
     TBN = mat3(T, B, N);
     //TBN = transpose(mat3(T, B, N)); //Transpose of orthogonal matrix (each axis is a perpendicular unit vec) == its inverse)
+
 
 
     if(useOffset){

@@ -11,6 +11,7 @@ ShaderProg::ShaderProg(cstr const& vsPath, cstr const& fsPath, cstr const& gsPat
 }
 
 ShaderProg::~ShaderProg() noexcept{
+	uniLocationCache.clear(); //For gd practice
 	glDeleteProgram(refID);
 }
 
@@ -18,9 +19,10 @@ void ShaderProg::ClearShaderCache() noexcept{
 	for(const auto& shader: shaderCache){
 		glDeleteShader(shader.second);
 	}
+	shaderCache.clear(); //For gd practice
 }
 
-const int& ShaderProg::GetUniLocation(cstr const& uniName) noexcept{
+int ShaderProg::GetUniLocation(cstr const& uniName) noexcept{
 	//if(uniLocationCache.find(uniName) != uniLocationCache.end()){ //If cached...
 	//	return uniLocationCache[uniName];
 	//}
@@ -34,7 +36,7 @@ const int& ShaderProg::GetUniLocation(cstr const& uniName) noexcept{
 	//}
 	//return currShaderProg->uniLocationCache[uniName];
 
-	int&& uniLocation = glGetUniformLocation(currShaderProg->refID, uniName);
+	int uniLocation = glGetUniformLocation(currShaderProg->refID, uniName);
 	return uniLocation;
 }
 

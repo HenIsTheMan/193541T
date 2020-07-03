@@ -4,9 +4,10 @@
 extern float angularFOV;
 
 Scene::Scene():
-    meshes{Mesh::CreatePts(), Mesh::CreateQuad(), Mesh::CreateCube(), Mesh::CreateRandHeightMap(Mesh::HillAlgParams(1000, 1000, 50, 300, 400, .01f, .02f))}, //Mesh::CreateHeightMap("Resources/Textures/HeightMaps/heightmap.raw")
+    meshes{Mesh::CreatePts(), Mesh::CreateQuad(), Mesh::CreateCube(), //Mesh::CreateHeightMap("Resources/Textures/HeightMaps/heightmap.raw")
+        Mesh::CreateRandHeightMap(Mesh::HillAlgParams(1000, 1000, 50, 300, 400, .01f, .02f)), Mesh::CreateSlicedTexQuad(128.f, 8.f, 8.f)},
     models{new Model("Resources/Models/Aloe_plant_SF.obj"), new Model("Resources/Models/nanosuit.obj"),
-    new Model("Resources/Models/MyPlanet.obj"), new Model("Resources/Models/rock.obj"), new Model("Resources/Models/Skydome.obj")},
+        new Model("Resources/Models/MyPlanet.obj"), new Model("Resources/Models/rock.obj"), new Model("Resources/Models/Skydome.obj"), new Model("Resources/Models/SingleGrass.obj")},
     basicShaderProg(new ShaderProg("Resources/Shaders/Basic.vs", "Resources/Shaders/Basic.fs")),
     explosionShaderProg(new ShaderProg("Resources/Shaders/Basic.vs", "Resources/Shaders/Basic.fs", "Resources/Shaders/Explosion.gs")),
     outlineShaderProg(new ShaderProg("Resources/Shaders/Basic.vs", "Resources/Shaders/Outline.fs")),
@@ -106,11 +107,11 @@ void Scene::RenderSky(const Cam& cam, const bool&& type) const{
         basicShaderProg->Use();
         ShaderProg::SetUni1i("skydome", 1);
         ShaderProg::LinkUniBlock("Settings", 1);
-        glCullFace(GL_FRONT);
-        SetUnis(cam, 1, glm::vec3(0.f, -20.f, 0.f), glm::vec4(0.f, 1.f, 0.f, 0.f), glm::vec3(1.f, -1.5f, 1.f));
-        models[4]->Draw(GL_TRIANGLES, 1, 1);
-        glCullFace(GL_BACK);
-        SetUnis(cam, 1, glm::vec3(0.f, -40.f, 0.f), glm::vec4(0.f, 1.f, 0.f, 0.f), glm::vec3(1.f, 1.5f, 1.f));
+        //glCullFace(GL_FRONT);
+        //SetUnis(cam, 1, glm::vec3(0.f, -80.f, 0.f), glm::vec4(0.f, 1.f, 0.f, 0.f), glm::vec3(1.5f, -1.5f, 1.5f));
+        //models[4]->Draw(GL_TRIANGLES, 1, 1);
+        //glCullFace(GL_BACK);
+        SetUnis(cam, 1, glm::vec3(0.f, -100.f, 0.f), glm::vec4(0.f, 1.f, 0.f, 0.f), glm::vec3(1.5f, 1.5f, 1.5f));
         models[4]->Draw(GL_TRIANGLES, 1, 1);
         ShaderProg::SetUni1i("skydome", 0);
     } else{
@@ -157,7 +158,8 @@ void Scene::Init(){
     meshes[2]->LoadTex("Resources/Textures/container2.png", "d");
     meshes[2]->LoadTex("Resources/Textures/container2_specular.png", "s");
     meshes[2]->LoadTex("Resources/Textures/awesomeface.png", "e");
-    meshes[3]->LoadTex("Resources/Textures/grass.jpg", "d");
+    meshes[3]->LoadTex("Resources/Textures/GrassGround.jpg", "d");
+    meshes[4]->LoadTex("Resources/Textures/Water.jpg", "d");
 
     size_t size = meshes[2]->textures.size();
     for(size_t i = 0; i < size; ++i){ //?????????????????
@@ -196,7 +198,6 @@ void Scene::RenderToCreatedFB(Cam const& cam, const Tex* const& enCubemap, const
     //    glm::mat4 dLightSpaceVP = glm::ortho(-10.f, 10.f, -10.f, 10.f, 1.f, 7.5f) * dCam.LookAt(); //Ensure projection frustum size is correct so no fragments of objs are clipped (fragments of objs not in the depth/... map will not produce shadows)
     //    glm::mat4 sLightSpaceVP = glm::perspective(glm::radians(angularFOV), 1024.f / 1024.f, 1.f, 50.f) * cam.LookAt(); //Depth is non-linear with perspective projection
     //    //glm::length(cam.GetPos()) / 50.f, glm::length(cam.GetPos()) * 20.f
-
     //    basicShaderProg->Use();
     //    ShaderProg::SetUni1i("depthOnly", 0);
     //    ShaderProg::SetUni1i("showShadows", 0);
@@ -240,20 +241,38 @@ void Scene::RenderToCreatedFB(Cam const& cam, const Tex* const& enCubemap, const
     }
 
     basicShaderProg->Use();
+
+    ///Render wooden floor
     SetUnis(cam, 2, {0.f, -12.f, 0.f}, glm::vec4(1.f, 0.f, 0.f, -90.f), glm::vec3(25.f));
     meshes[1]->textures[1].SetActiveOnMesh(1);
     meshes[1]->Draw(GL_TRIANGLES, 1);
+
+    ///Render wall
     ShaderProg::SetUni1i("bump", 1);
     SetUnis(cam, 2, {0.f, 0.f, -20.f}, glm::vec4(1.f, 0.f, 0.f, -90.f), glm::vec3(5.f));
     meshes[1]->textures[2].SetActiveOnMesh(1);
     meshes[1]->textures[3].SetActiveOnMesh(1);
     meshes[1]->Draw(GL_TRIANGLES, 1);
     ShaderProg::SetUni1i("bump", 0);
+    
+    ///Render grass instances
+    //const uint amt = 1000;
+    //ShaderProg::SetUni1i("useMat", 1);
+    //models[3]->Draw(GL_TRIANGLES, amt, 1);
+    //ShaderProg::SetUni1i("useMat", 0);
 
-    basicShaderProg->Use();
+    ///Render terrain
     SetUnis(cam, 2, glm::vec3(0.f, -40.f, 0.f), glm::vec4(1.f, 0.f, 0.f, 0.f), glm::vec3(100.f));
     meshes[3]->textures[0].SetActiveOnMesh(1);
     meshes[3]->Draw(GL_TRIANGLE_STRIP, 1);
+
+    ///Render wave
+    ShaderProg::SetUni1i("wave", 1);
+    ShaderProg::SetUni1f("time", (float)glfwGetTime());
+    SetUnis(cam, 2, glm::vec3(0.f, -500.f, 0.f), glm::vec4(1.f, 0.f, 0.f, 0.f), glm::vec3(4000.f, 20.f, 4000.f));
+    meshes[4]->textures[0].SetActiveOnMesh(1);
+    meshes[4]->Draw(GL_TRIANGLES, 1);
+    ShaderProg::SetUni1i("wave", 0);
 
     RenderSky(cam, 1); //Draw opaque objs first so depth buffer is filled with depth values of opaque objs and hence call frag shader to render only frags which pass the early depth test (saves bandwidth as frag shader does not run for frags that fail early depth test)
     RenderWindows(cam); //Draw opaque objs first so dst colour used in blend eqn is correct //Issues when too close to each other??

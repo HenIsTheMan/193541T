@@ -30,6 +30,7 @@ void Framebuffer::Del() const noexcept{
         RBO->Del();
     }
     glDeleteFramebuffers(1, &refID);
+    delete this;
 }
 
 const uint& Framebuffer::GetRefID() const noexcept{
@@ -131,6 +132,7 @@ Renderbuffer::Renderbuffer(const int& texTarget, const int& width, const int& he
 
 void Renderbuffer::Del() const noexcept{
     glDeleteBuffers(1, &refID);
+    delete this;
 }
 
 void Renderbuffer::Create(const int& texTarget, const int& width, const int& height){ //RBOs store render data directly (so data in native format) in their buffer (an arr of stuff) without conversions to texture-specific formats so fast as a writeable storage medium (fast when writing or copying data to other buffers and with operations like switching buffers) //The glfwSwapBuffers function may as well be implemented with RBOs (simply write to a renderbuffer img, and swap to the other one at the end)??

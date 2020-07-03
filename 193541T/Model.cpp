@@ -28,11 +28,11 @@ void Model::ProcessNode(aiNode* node, const aiScene* scene) const{ //Process all
 }
 
 const Mesh Model::ProcessMesh(aiMesh* meshObj, const aiScene* scene) const{
-    std::vector<Vertex>* vertices = new std::vector<Vertex>;
+    std::vector<Vertex> vertices;
     std::vector<uint>* indices = new std::vector<uint>;
 
     for(uint i = 0; i < meshObj->mNumVertices; ++i){ //For each vertex of the mesh...
-        (*vertices).emplace_back(Vertex(
+        vertices.emplace_back(Vertex(
             glm::vec3(meshObj->mVertices[i].x, meshObj->mVertices[i].y, meshObj->mVertices[i].z),
             (meshObj->mColors[0] ? glm::vec4(meshObj->mColors[0][i].r, meshObj->mColors[0][i].g, meshObj->mColors[0][i].b, meshObj->mColors[0][i].a) : glm::vec4(0.f)),
             (meshObj->mTextureCoords[0] ? glm::vec2(meshObj->mTextureCoords[0][i].x, meshObj->mTextureCoords[0][i].y) : glm::vec2(0.f)), //Assimp allows a model to have 8 diff texCoords per vertex //Check if mesh has texCoords before...
@@ -43,15 +43,15 @@ const Mesh Model::ProcessMesh(aiMesh* meshObj, const aiScene* scene) const{
     for(uint i = 0; i < meshObj->mNumFaces; ++i){ //For each face of the mesh... //Each mesh has an arr of primitive faces (triangles due to the aiProcess_Triangulate post-processing option)
         aiFace face = meshObj->mFaces[i]; //Contains indices defining which vertices to draw and in what order for each primitive //Placeholder
         for(uint j = 0; j < face.mNumIndices; ++j){
-            (*indices).emplace_back(face.mIndices[j]);
+            indices->emplace_back(face.mIndices[j]);
         }
     }
-    Mesh mesh(vertices, indices);
+    Mesh mesh(&vertices, indices);
     if(meshObj->mMaterialIndex >= 0){ //Query the mesh's material index to check if the mesh contains a material
         aiMaterial* matObj = scene->mMaterials[meshObj->mMaterialIndex]; //Just like with nodes, a mesh only contains an index to a material obj so retrieve aiMaterial obj (stores the material data, contains an arr of texture locations for each texture type) by indexing...
         std::vector<std::pair<str, str>> texMaps;
         LoadMaterialTextures(matObj, texMaps);
-        for(const auto& texMap: texMaps){
+        for(const auto& texMap : texMaps){
             mesh.LoadTex(texMap.first.c_str(), texMap.second, 0); //No need to flip tex as aiProcess_FlipUVs flag is set
         }
     }

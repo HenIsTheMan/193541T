@@ -44,7 +44,7 @@ void main(){
         } break;
 
         case 3: ApplyKernel(offsets, float[](-1, -1, -1, -1, 9, -1, -1, -1, -1)); break; //Sharpen kernel (sharpens each colour value by sampling all surrounding pixels)
-        case 4: ApplyKernel(offsets, float[](.0625f, .125f, .0625f, .125f, .25f, .125f, .0625f, .125f, .0625f)); break; //Blur kernel (vary blur amt over time for drunk effect, can use blur for smoothing colour values)
+        case 4: ApplyKernel(offsets, float[](.0625f, .125f, .0625f, .125f, .25f, .125f, .0625f, .125f, .0625f)); break; //Blur kernel (vary blur amt over time for drunk effect, can use blur for smoothing colour values) //Because all values add up to 16, directly returning the combined sampled colors would result in an extremely bright color so we have to divide each value of the kernel by 16??
         default: ApplyKernel(offsets, float[](1.f, 1.f, 1.f, 1.f, -8.f, 1.f, 1.f, 1.f, 1.f)); //Edge-detection kernel (highlights all edges and darkens the rest)
     }
 

@@ -59,7 +59,6 @@ void App::Update(const Cam& cam){
     float currFrame = (float)glfwGetTime();
     dt = currFrame - lastFrame;
     lastFrame = currFrame;
-    glfwSetWindowShouldClose(win, glfwGetKey(win, GLFW_KEY_ESCAPE));
 
     scene->Update(cam);
 

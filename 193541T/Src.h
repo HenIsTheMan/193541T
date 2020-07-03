@@ -2,6 +2,7 @@
 #include <ASSIMP/Importer.hpp>
 #include <ASSIMP/scene.h>
 #include <ASSIMP/postprocess.h>
+#include <Windows.h>
 #include <GLAD/glad.h>
 #include <GLFW/glfw3.h>
 #include <GLM/glm.hpp>

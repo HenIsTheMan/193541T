@@ -21,8 +21,8 @@ class Scene final{
         "Resources/Textures/Skyboxes/Front.png",
         "Resources/Textures/Skyboxes/Back.png"
     };
-	Mesh* meshes[4];
-    Model* models[5];
+	Mesh* meshes[5];
+    Model* models[6];
 	ShaderProg* basicShaderProg;
 	ShaderProg* explosionShaderProg;
 	ShaderProg* outlineShaderProg;

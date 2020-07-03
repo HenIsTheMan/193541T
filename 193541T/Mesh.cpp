@@ -24,6 +24,9 @@ Mesh::Mesh(const Mesh& other) noexcept{
 
 Mesh::~Mesh() noexcept{
     delete indices;
+    glDeleteBuffers(1, &VAO);
+    glDeleteBuffers(1, &VBO);
+    glDeleteBuffers(1, &EBO);
 }
 
 void Mesh::Init(const uint& instanceAmt){
@@ -71,12 +74,12 @@ void Mesh::Init(const uint& instanceAmt){
     float radius = 9.f;
     float offset = 2.3f;
     for(uint i = 0; i < instanceAmt; ++i){
-        float angle = (float)i / (float)instanceAmt * 360.0f;
-        float displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset; //Multi??
+        float angle = (float)i / (float)instanceAmt * 360.f;
+        float displacement = (rand() % (int)(2 * offset * 100)) / 100.f - offset; //Multi??
         ///transform x and z along the circle and randomly displace along circle with 'radius' in range [-offset, offset]??
         glm::mat4 model = translate(glm::mat4(1.f), glm::vec3(sin(angle) * radius + displacement, 20.f + displacement * 0.4f, cos(angle) * radius + displacement));
         model = rotate(model, float(rand() % 360), glm::vec3(0.4f, 0.6f, 0.8f));
-        model = scale(model, glm::vec3((rand() % 21) / 100.0f + 0.05f));
+        model = scale(model, glm::vec3((rand() % 21) / 100.f + 0.05f));
         modelMatrices[i] = model;
     }
 
@@ -115,6 +118,7 @@ void Mesh::Init(const uint& instanceAmt){
             glVertexAttribDivisor(i, 1); //Params: vertex attrib location, attrib divisor (0 means update vertex attrib to the next element per vertex and non-0 means... every non-0 amt of instances) //Config vertex attrib as an instanced arr (allows for passing more data [limited by mem] to the vertex shader for instanced drawing/...)
         }
     } glBindVertexArray(0); //Break the existing vertex arr obj binding
+    delete[] modelMatrices;
 }
 
 Mesh* const Mesh::CreatePts(){
@@ -155,10 +159,10 @@ Mesh* const Mesh::CreateQuad(){
     bitangent1.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
     bitangent1 = glm::normalize(bitangent1);
 
-    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, -1.f, 0.f), glm::vec4(0.f, 0.f, 1.f, 1.f), glm::vec2(0.f, 0.f), glm::vec3(0.0f, 0.0f, 1.f), tangent1, bitangent1));
-    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, 1.f, 0.f), glm::vec4(0.f, 1.f, 1.f, 1.f), glm::vec2(1.f, 1.f), glm::vec3(0.0f, 0.0f, 1.f), tangent1, bitangent1));
-    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, 1.f, 0.f), glm::vec4(1.f, 0.f, 0.f, 1.f), glm::vec2(0.f, 1.f), glm::vec3(0.0f, 0.0f, 1.f), tangent1, bitangent1));
-    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, -1.f, 0.f), glm::vec4(0.f, 1.f, 0.f, 1.f), glm::vec2(1.f, 0.f), glm::vec3(0.0f, 0.0f, 1.f), tangent1, bitangent1));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, -1.f, 0.f), glm::vec4(0.f, 0.f, 1.f, 1.f), glm::vec2(0.f, 0.f), glm::vec3(0.f, 0.f, 1.f), tangent1, bitangent1));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, 1.f, 0.f), glm::vec4(0.f, 1.f, 1.f, 1.f), glm::vec2(1.f, 1.f), glm::vec3(0.f, 0.f, 1.f), tangent1, bitangent1));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, 1.f, 0.f), glm::vec4(1.f, 0.f, 0.f, 1.f), glm::vec2(0.f, 1.f), glm::vec3(0.f, 0.f, 1.f), tangent1, bitangent1));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, -1.f, 0.f), glm::vec4(0.f, 1.f, 0.f, 1.f), glm::vec2(1.f, 0.f), glm::vec3(0.f, 0.f, 1.f), tangent1, bitangent1));
     mesh->indices = new std::vector<uint>{0, 1, 2, 0, 3, 1};
     return mesh;
 }
@@ -166,35 +170,35 @@ Mesh* const Mesh::CreateQuad(){
 Mesh* const Mesh::CreateCube(){
     Mesh* mesh = new Mesh;
 
-    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, 1.f, 1.f), glm::vec4(0.f, 0.f, 0.f, 1.f), glm::vec2(1.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)));
-    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, 1.f, -1.f), glm::vec4(0.f, 0.f, 0.f, 1.f), glm::vec2(1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f)));
-    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, 1.f, -1.f), glm::vec4(0.f, 0.f, 0.f, 1.f), glm::vec2(0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f)));
-    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, 1.f, 1.f), glm::vec4(0.f, 0.f, 0.f, 1.f), glm::vec2(0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, 1.f, 1.f), glm::vec4(1.f), glm::vec2(1.f, 0.f), glm::vec3(0.f, 1.f, 0.f)));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, 1.f, -1.f), glm::vec4(1.f), glm::vec2(1.f, 1.f), glm::vec3(0.f, 1.f, 0.f)));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, 1.f, -1.f), glm::vec4(1.f), glm::vec2(0.f, 1.f), glm::vec3(0.f, 1.f, 0.f)));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, 1.f, 1.f), glm::vec4(1.f), glm::vec2(0.f, 0.f), glm::vec3(0.f, 1.f, 0.f)));
 
-    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, -1.f, 1.f), glm::vec4(0.f, 0.f, 0.f, 1.f), glm::vec2(0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
-    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, -1.f, -1.f), glm::vec4(0.f, 0.f, 0.f, 1.f), glm::vec2(1.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
-    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, 1.f, -1.f), glm::vec4(0.f, 0.f, 0.f, 1.f), glm::vec2(1.0f, 1.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
-    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, 1.f, 1.f), glm::vec4(0.f, 0.f, 0.f, 1.f), glm::vec2(0.0f, 1.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, -1.f, 1.f), glm::vec4(1.f), glm::vec2(0.f, 0.f), glm::vec3(1.f, 0.f, 0.f)));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, -1.f, -1.f), glm::vec4(1.f), glm::vec2(1.f, 0.f), glm::vec3(1.f, 0.f, 0.f)));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, 1.f, -1.f), glm::vec4(1.f), glm::vec2(1.f, 1.f), glm::vec3(1.f, 0.f, 0.f)));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, 1.f, 1.f), glm::vec4(1.f), glm::vec2(0.f, 1.f), glm::vec3(1.f, 0.f, 0.f)));
 
-    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, 1.f, 1.f), glm::vec4(0.f, 0.f, 0.f, 1.f), glm::vec2(1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
-    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, 1.f, 1.f), glm::vec4(0.f, 0.f, 0.f, 1.f), glm::vec2(0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
-    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, -1.f, 1.f), glm::vec4(0.f, 0.f, 0.f, 1.f), glm::vec2(0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
-    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, -1.f, 1.f), glm::vec4(0.f, 0.f, 0.f, 1.f), glm::vec2(1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, 1.f, 1.f), glm::vec4(1.f), glm::vec2(1.f, 1.f), glm::vec3(0.f, 0.f, 1.f)));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, 1.f, 1.f), glm::vec4(1.f), glm::vec2(0.f, 1.f), glm::vec3(0.f, 0.f, 1.f)));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, -1.f, 1.f), glm::vec4(1.f), glm::vec2(0.f, 0.f), glm::vec3(0.f, 0.f, 1.f)));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, -1.f, 1.f), glm::vec4(1.f), glm::vec2(1.f, 0.f), glm::vec3(0.f, 0.f, 1.f)));
 
-    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, -1.f, -1.f), glm::vec4(0.f, 0.f, 0.f, 1.f), glm::vec2(1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
-    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, -1.f, -1.f), glm::vec4(0.f, 0.f, 0.f, 1.f), glm::vec2(0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
-    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, 1.f, -1.f), glm::vec4(0.f, 0.f, 0.f, 1.f), glm::vec2(0.0f, 1.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
-    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, 1.f, -1.f), glm::vec4(0.f, 0.f, 0.f, 1.f), glm::vec2(1.0f, 1.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, -1.f, -1.f), glm::vec4(1.f), glm::vec2(1.f, 0.f), glm::vec3(0.f, 0.f, -1.f)));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, -1.f, -1.f), glm::vec4(1.f), glm::vec2(0.f, 0.f), glm::vec3(0.f, 0.f, -1.f)));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, 1.f, -1.f), glm::vec4(1.f), glm::vec2(0.f, 1.f), glm::vec3(0.f, 0.f, -1.f)));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, 1.f, -1.f), glm::vec4(1.f), glm::vec2(1.f, 1.f), glm::vec3(0.f, 0.f, -1.f)));
 
-    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, -1.f, -1.f), glm::vec4(0.f, 0.f, 0.f, 1.f), glm::vec2(1.0f, 0.0f), glm::vec3(-1.0f, 0.0f, 0.0f)));
-    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, -1.f, 1.f), glm::vec4(0.f, 0.f, 0.f, 1.f), glm::vec2(0.0f, 0.0f), glm::vec3(-1.0f, 0.0f, 0.0f)));
-    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, 1.f, 1.f), glm::vec4(0.f, 0.f, 0.f, 1.f), glm::vec2(0.0f, 1.0f), glm::vec3(-1.0f, 0.0f, 0.0f)));
-    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, 1.f, -1.f), glm::vec4(0.f, 0.f, 0.f, 1.f), glm::vec2(1.0f, 1.0f), glm::vec3(-1.0f, 0.0f, 0.0f)));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, -1.f, -1.f), glm::vec4(1.f), glm::vec2(1.f, 0.f), glm::vec3(-1.f, 0.f, 0.f)));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, -1.f, 1.f), glm::vec4(1.f), glm::vec2(0.f, 0.f), glm::vec3(-1.f, 0.f, 0.f)));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, 1.f, 1.f), glm::vec4(1.f), glm::vec2(0.f, 1.f), glm::vec3(-1.f, 0.f, 0.f)));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, 1.f, -1.f), glm::vec4(1.f), glm::vec2(1.f, 1.f), glm::vec3(-1.f, 0.f, 0.f)));
 
-    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, -1.f, -1.f), glm::vec4(0.f, 0.f, 0.f, 1.f), glm::vec2(0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, -1.f, -1.f), glm::vec4(0.f, 0.f, 0.f, 1.f), glm::vec2(1.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, -1.f, 1.f), glm::vec4(0.f, 0.f, 0.f, 1.f), glm::vec2(1.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, -1.f, 1.f), glm::vec4(0.f, 0.f, 0.f, 1.f), glm::vec2(0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, -1.f, -1.f), glm::vec4(1.f), glm::vec2(0.f, 1.f), glm::vec3(0.f, -1.f, 0.f)));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, -1.f, -1.f), glm::vec4(1.f), glm::vec2(1.f, 1.f), glm::vec3(0.f, -1.f, 0.f)));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, -1.f, 1.f), glm::vec4(1.f), glm::vec2(1.f, 0.f), glm::vec3(0.f, -1.f, 0.f)));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, -1.f, 1.f), glm::vec4(1.f), glm::vec2(0.f, 0.f), glm::vec3(0.f, -1.f, 0.f)));
 
     mesh->indices = new std::vector<uint>;
     short myArr[6]{0, 1, 2, 2, 3, 0};
@@ -254,7 +258,7 @@ void Mesh::LoadTex(const cstr& fPath, const str& type, const bool&& flipTex){
 }
 
 std::vector<std::vector<float>> Mesh::GenRandHeightData(const HillAlgParams& params){
-    std::vector<std::vector<float>> heightData(params.rows, std::vector<float>(params.columns, 0.0f));
+    std::vector<std::vector<float>> heightData(params.rows, std::vector<float>(params.columns, 0.f));
 
     std::random_device rd;
     std::mt19937 generator(rd());
@@ -277,15 +281,15 @@ std::vector<std::vector<float>> Mesh::GenRandHeightData(const HillAlgParams& par
                 const auto x2x1 = hillCenterCol - c; //(x2-x1) ter??
                 const auto y2y1 = hillCenterRow - r; //(y2-y1) ter??
                 const auto height = float(r2 - x2x1 * x2x1 - y2y1 * y2y1);
-                if(height < 0.0f){ //should not happen, but checks like this won't hurt anyway
+                if(height < 0.f){ //should not happen, but checks like this won't hurt anyway
                     continue;
                 }
 
                 //we calculate a factor, how far is that number on scale from 0.0 to r2 and we add the random hill height multiplied by this factor. We also make sure however, that we don't exceed 1.0, which is the maximum possible height. This way we keep the heightmap data between 0.0 and 1.0 for sure!
                 const auto factor = height / r2;
                 heightData[r][c] += hillHeight * factor;
-                if(heightData[r][c] > 1.0f) {
-                    heightData[r][c] = 1.0f;
+                if(heightData[r][c] > 1.f) {
+                    heightData[r][c] = 1.f;
                 }
             }
         }
@@ -418,6 +422,30 @@ void Mesh::GenHeightMapIndices(Mesh* const& mesh, const int& rows, const int& co
     }
     //// Calculate total count of indices
     //_numIndices = (rows - 1) * columns * 2 + rows - 1;
+}
+
+Mesh* const Mesh::CreateSlicedTexQuad(const float& quadSize, const float& hTile, const float& vTile){
+    Mesh* mesh = new Mesh;
+    for(uint z = 0; z < (uint)quadSize; ++z){
+        for(uint x = 0; x < (uint)quadSize; ++x){
+            mesh->vertices.emplace_back(Vertex({float(x) / quadSize - .5f, 0.f, float(z) / quadSize - .5f}, glm::vec4(1.f), {float(x) / quadSize * hTile, 1.f - float(z) / quadSize * vTile}, {0.f, 1.f, 0.f}));
+        }
+    }
+    mesh->indices = new std::vector<uint>;
+    for(uint z = 0; z < uint(quadSize - 1.f); ++z){
+        for(uint x = 0; x < uint(quadSize - 1.f); ++x){
+            ///Triangle 1
+            (*(mesh->indices)).emplace_back(uint(quadSize * z + x + 0));
+            (*(mesh->indices)).emplace_back(uint(quadSize * (z + 1) + x + 0));
+            (*(mesh->indices)).emplace_back(uint(quadSize * z + x + 1));
+
+            ///Triangle 2
+            (*(mesh->indices)).emplace_back(uint(quadSize * (z + 1) + x + 1));
+            (*(mesh->indices)).emplace_back(uint(quadSize * z + x + 1));
+            (*(mesh->indices)).emplace_back(uint(quadSize * (z + 1) + x + 0));
+        }
+    }
+    return mesh;
 }
 
 //uint* indicesPtr = new uint[indices.size()];
