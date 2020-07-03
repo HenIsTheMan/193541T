@@ -13,7 +13,7 @@ float LineariseDepth(float depth){ //Reverse the process of projection for depth
 }
 
 void main(){
-    float depthLinearised = LineariseDepth(gl_FragCoord.z); //gl_FragCoord.xy represents the fragment's screen space coords with (0, 0) being the bottom-left corner //gl_FragCoord.z contains the depth value of the fragment (compared to the depth buffer's content)
+    float depthLinearised = LineariseDepth(gl_FragCoord.z); //gl_FragCoord.xy is fragment's window-space/screen-space coords with (0, 0) being the bottom-left corner //gl_FragCoord.z is depth value of fragment (compared to the depth buffer's content)
     FragColor = texture(texture1, TexCoords);
     /*if(FragColor.a < .1f){
         discard; //Fragment is discarded and not stored in the color buffer

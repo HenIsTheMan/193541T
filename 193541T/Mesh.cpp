@@ -22,7 +22,7 @@ void Mesh::SetupMesh(){ //Create and config a VAO
 
     glBindVertexArray(VAO); {
         glBindBuffer(GL_ARRAY_BUFFER, VBO); //Makes VBO the buffer currently bound to the GL_ARRAY_BUFFER target, GL_ARRAY_BUFFER is VBO's type
-        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW); //Copies vertex data stored in 'vertices' into VBO's mem
+        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW); //Copies vertex data stored in 'vertices' into VBO's mem //Mem layout of all structs in C++ is sequential so can put &vertices[0]
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO); //Give meaning to buffer by binding it to a buffer target
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint), &indices[0], GL_STATIC_DRAW); //Allocates a piece of GPU mem and adds data into it (reserve mem only if pass NULL as its data argument)
@@ -59,7 +59,6 @@ void Mesh::SetupMesh(){ //Create and config a VAO
         //glBindBuffer(GL_ARRAY_BUFFER, vbo1);
         //glBindBuffer(GL_COPY_WRITE_BUFFER, vbo2);
         //glCopyBufferSubData(GL_ARRAY_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, 8 * sizeof(float)); //Use GL_COPY_READ_BUFFER and/or GL_COPY_WRITE_BUFFER if 2 buffers of the same type
-
     } glBindVertexArray(0); //Break the existing vertex arr obj binding
 }
 
@@ -103,26 +102,16 @@ void Mesh::Draw(bool indexed, bool tex) const{
     }
     glBindVertexArray(VAO); {
         if(indexed){
-            glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, 0); //Render from index buffer rather than vertex buffer
+            glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, 0); //Render call //Render from index buffer rather than vertex buffer
         } else{
-            glDrawArrays(GL_TRIANGLES, 0, 36); //GL_TRIANGLES??
+            glDrawArrays(GL_TRIANGLES, 0, 36); //Render call
         }
     } glBindVertexArray(0); //Break the existing vertex arr obj binding
 }
 
-void Mesh::Draw2() const{
-    //for(const auto& tex : textures){
-    for(uint i = 0; i < textures.size(); ++i){
-        GLenum texUnit = GL_TEXTURE0 + i;
-        glActiveTexture(texUnit);
-        glBindTexture(GL_TEXTURE_2D, textures[i].refID); {
-            ShaderChief::SetUni1i(("map[" + std::to_string(i) + ']').c_str(), texUnit);
-        }
-    }
-    ShaderChief::SetUni1i("mapCount", (int)textures.size());
-
+void Mesh::DrawPts(uint amt = 1) const{
     glBindVertexArray(VAO); {
-        glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, 0); //Render from index buffer rather than vertex buffer
+        glDrawArrays(GL_POINTS, 0, amt); //Render call //GL_POINTS (each vertex is a primitive and rendered as a pt) is a render primitive //GL_POINT??
     } glBindVertexArray(0); //Break the existing vertex arr obj binding
 }
 

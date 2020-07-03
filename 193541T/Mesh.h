@@ -26,5 +26,5 @@ public:
     Mesh(std::vector<Vertex>, std::vector<uint>);
     void LoadTexture(cstr, str);
     void Draw(bool, bool) const;
-    void Draw2() const;
+    void DrawPts(uint) const;
 };

@@ -2,19 +2,30 @@
 
 uint ShaderChief::currID = 0;
 
-ShaderChief::ShaderChief(cstr vsPath, cstr fsPath): shaderProgID(glCreateProgram()){
-	uint vsRefID = glCreateShader(GL_VERTEX_SHADER), fsRefID = glCreateShader(GL_FRAGMENT_SHADER);
-	ParseShader(vsPath, vsRefID);
-	ParseShader(fsPath, fsRefID);
-	glAttachShader(shaderProgID, vsRefID);
-	glAttachShader(shaderProgID, fsRefID);
-	LinkProg();
-	glDeleteShader(vsRefID);
-	glDeleteShader(fsRefID);
+ShaderChief::ShaderChief(cstr vsPath, cstr fsPath, cstr gsPath): shaderProgID(999){
+	shaderFilePaths[0] = vsPath;
+	shaderFilePaths[1] = fsPath;
+	shaderFilePaths[2] = gsPath;
 }
 
 ShaderChief::~ShaderChief(){
 	glDeleteProgram(shaderProgID);
+}
+
+void ShaderChief::Init(){
+	shaderProgID = glCreateProgram();
+	std::vector<uint> shaderRefIDs{glCreateShader(GL_VERTEX_SHADER), glCreateShader(GL_FRAGMENT_SHADER)};
+	if(shaderFilePaths[2] != ""){
+		shaderRefIDs.emplace_back(glCreateShader(GL_GEOMETRY_SHADER)); //Takes set of vertices that form a primitive as input (so its input data from the vertex shader is always represented as arrays of vertex data even though we only have a single vertex right now??)
+	} //Shapes are dynamically generated on the GPU with geometry shaders (better than defining shapes within vertex buffers) so good for simple repeating forms like cubes in a voxel world or grass in a field
+	for(short i = 0; i < shaderRefIDs.size(); ++i){
+		ParseShader(shaderFilePaths[i], shaderRefIDs[i]);
+		glAttachShader(shaderProgID, shaderRefIDs[i]);
+	}
+	LinkProg();
+	for(const auto& shaderRefID: shaderRefIDs){
+		glDeleteShader(shaderRefID);
+	}
 }
 
 void ShaderChief::ParseShader(cstr fPath, uint shaderID) const{
@@ -101,7 +112,10 @@ void ShaderChief::SetUni1i(cstr uniName, int value, bool warn){
 	}
 }
 
-void ShaderChief::UseProg() const{
+void ShaderChief::UseProg(){
+	if(shaderProgID == 999){
+		Init();
+	}
 	glUseProgram(shaderProgID);
 	currID = shaderProgID;
 }

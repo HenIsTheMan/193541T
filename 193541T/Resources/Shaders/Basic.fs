@@ -35,13 +35,14 @@ uniform PointLight pLights[ptLightAmt];
 uniform DirectionalLight dLight;
 uniform Spotlight sLight;
 
-in vec3 ourColor; //??
+in vec3 ourColour;
 in vec2 TexCoords;
 in vec3 Normal;
 in vec3 FragPos;
 vec3 normal = normalize(Normal);
 uniform vec3 camPos;
-uniform samplerCube skybox; //??
+uniform samplerCube skybox;
+uniform bool useFlatColour;
 
 ///Light properties (++ w-component??) 
 const vec3 lightAmbient = vec3(.4f); //Ambient component of light //Small value so it has a small impact
@@ -94,13 +95,14 @@ void main(){ //With Phong lighting model
     const float ratio = 1.f / 1.52f; //n of air / n of glass (ratio between refractive indices of both materials)
     vec3 incidentRay = normalize(FragPos - camPos);
     vec3 reflectedRay = reflect(incidentRay, normal);
-    vec3 refractedRay = refract(incidentRay, normal, ratio);
+    vec3 refractedRay1st = refract(incidentRay, normal, ratio);
+    vec3 refractedRay2nd = refract(refractedRay1st, normal, 1.f / ratio); //Wrong normal??
 
     vec3 result = CalcDirectionalLight(dLight) + CalcSpotlight(sLight);
     for(int i = 0; i < ptLightAmt; ++i){
         result += CalcPointLight(pLights[i]);
     }
-    result *= mix(texture(skybox, reflectedRay).rgb, texture(skybox, refractedRay).rgb, 0.5); //Use both vecs to index/sample cubemap //For environment mapping
+    result *= mix(texture(skybox, reflectedRay).rgb, texture(skybox, refractedRay2nd).rgb, 0.5); //Use both vecs to index/sample cubemap //For environment mapping
     if(emission){
         result *= vec3(texture(material.eMap, TexCoords));
     }
@@ -110,5 +112,7 @@ void main(){ //With Phong lighting model
     if(reflection){
         result *= vec3(texture(material.rMap, TexCoords));
     }
-    FragColor = vec4(result, 1.f); //texture(...) returns colour of tex at an interpolated set of texCoords
+    FragColor = vec4(useFlatColour ? ourColour : result, 1.f); //texture(...) returns colour of tex at an interpolated set of texCoords
 }
+
+//Lighting, reflection, refraction and vertex movement for water rendering??

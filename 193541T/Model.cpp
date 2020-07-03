@@ -54,7 +54,7 @@ Mesh Model::ProcessMesh(aiMesh* meshObj, const aiScene* scene){
     return mesh;
 }
 
-void Model::LoadMaterialTextures(const aiMaterial* const mat, std::vector<std::pair<str, str>>& texMaps){ //Helper function to retrieve the textures from the material
+void Model::LoadMaterialTextures(const aiMaterial* const& mat, std::vector<std::pair<str, str>>& texMaps){ //Helper function to retrieve the textures from the material
     aiTextureType types[]{aiTextureType_DIFFUSE, aiTextureType_SPECULAR, aiTextureType_EMISSIVE, aiTextureType_NORMALS, aiTextureType_AMBIENT};
     for(short i = 0; i < sizeof(types) / sizeof(types[0]); ++i){
         for(uint j = 0; j < mat->GetTextureCount(types[i]); ++j){ //For each texture in the material of the given texture type...
@@ -77,13 +77,7 @@ void Model::LoadMaterialTextures(const aiMaterial* const mat, std::vector<std::p
 }
 
 void Model::Draw(bool indexed, bool tex) const{
-    for(auto mesh: meshes){
+    for(const auto& mesh: meshes){
         mesh.Draw(indexed, tex);
-    }
-}
-
-void Model::Draw2() const{
-    for(auto mesh : meshes){
-        mesh.Draw2();
     }
 }

@@ -1,20 +1,22 @@
 #version 330 core
 out vec4 FragColor;
 
-in vec2 TexCoords;
+in myInterface{ //Input interface block
+    vec2 TexCoords;
+} fsIn; //Instance
 
 uniform sampler2D screenTexture;
 
 const float offset = 1.f / 300.f; //Customisable
 
 void main(){
-    FragColor = texture(screenTexture, TexCoords);
+    FragColor = texture(screenTexture, fsIn.TexCoords);
 
     ////Post-processing effects
-    //FragColor = vec4(vec3(1.f) - vec3(texture(screenTexture, TexCoords)), 1.f); //Colour Inversion
+    //FragColor = vec4(vec3(1.f) - vec3(texture(screenTexture, fsIn.TexCoords)), 1.f); //Colour Inversion
 
     ///Grayscale
-    /*FragColor = texture(screenTexture, TexCoords);
+    /*FragColor = texture(screenTexture, fsIn.TexCoords);
     //float avg = (FragColor.r + FragColor.g + FragColor.b) / 3.f;
     float avg = 0.2126f * FragColor.r + 0.7152f * FragColor.g + 0.0722f * FragColor.b; //Weighted grayscale (weighted colour channels used, most physically accurate)
     FragColor = vec4(vec3(avg), 1.f);*/
@@ -39,10 +41,10 @@ void main(){
         -1, -1, -1
     );*/
 
-    /*float kernel[9] = float[]( //Blur kernel
+    /*float kernel[9] = float[]( //Blur kernel (vary blur amt over time for drunk effect, can use blur for smoothing colour values)
         1.0 / 16, 2.0 / 16, 1.0 / 16,
         2.0 / 16, 4.0 / 16, 2.0 / 16,
-        1.0 / 16, 2.0 / 16, 1.0 / 16  
+        1.0 / 16, 2.0 / 16, 1.0 / 16
     );*/
     //Because all values add up to 16, directly returning the combined sampled colors would result in an extremely bright color so we have to divide each value of the kernel by 16??
     
@@ -54,7 +56,7 @@ void main(){
 
     vec3 sampleTex[9];
     for(int i = 0; i < 9; ++i){ //Tex sampling
-        sampleTex[i] = vec3(texture(screenTexture, TexCoords.st + offsets[i]));
+        sampleTex[i] = vec3(texture(screenTexture, fsIn.TexCoords.st + offsets[i]));
     }
     vec3 col = vec3(0.f);
     for(int i = 0; i < 9; ++i){

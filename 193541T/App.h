@@ -15,8 +15,11 @@ class App final{
 	static float lastX, lastY;
 	static float sensitivity;
 	static bool Key(int);
-	uint FBO, texColourBuffer, RBO;
-	void CreateFramebuffer();
+	uint frontFBO, frontTexColourBuffer, frontRBO;
+	uint backFBO, backTexColourBuffer, backRBO;
+	uint enFBO, enTexColourBuffer, enRBO;
+	uint enTex;
+	void CreateFramebuffer(uint&, uint&, uint&);
 public:
 	App();
 	~App();
