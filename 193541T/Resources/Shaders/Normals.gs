@@ -9,11 +9,22 @@ in myInterface{
     vec3 FragPosWorldSpace;
 } gsIn[];
 
+out myInterface{
+    vec4 Colour;
+    vec2 TexCoords;
+    vec3 Normal;
+    vec3 FragPosWorldSpace;
+} gsOut;
+
 uniform float len;
 
 void GenLine(int index){
     for(float i = 0.f; i <= len; i += len){
         gl_Position = gl_in[index].gl_Position + i * vec4(normalize(gsIn[index].Normal), 0.f);
+        gsOut.Colour = gsIn[index].Colour;
+        gsOut.TexCoords = gsIn[index].TexCoords;
+        gsOut.Normal = gsIn[index].Normal;
+        gsOut.FragPosWorldSpace = gsIn[index].FragPosWorldSpace;
         EmitVertex();
     }
     EndPrimitive();

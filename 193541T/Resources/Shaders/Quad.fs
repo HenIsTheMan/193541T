@@ -22,8 +22,11 @@ void main(){
     FragColor = texture(texSampler, fsIn.TexCoords);
     FragColor.rgb = pow(FragColor.rgb, vec3(gamma));
 
-    float depthLinearised = LineariseDepth(gl_FragCoord.z); //gl_FragCoord.xy is fragment's window-space/screen-space coords with (0, 0) being the bottom-left corner //gl_FragCoord.z is depth value of fragment (compared to the depth buffer's content)
-    if(FragColor.a > .1f && FragColor.a < 1.f){
+    if(FragColor.a <= .1f){
+        discard; //Discard fragments (not stored in the color buffer) over blending them for fully transparent objs so no depth issues
+        return;
+    } else if(FragColor.a < 1.f){
+        float depthLinearised = LineariseDepth(gl_FragCoord.z); //gl_FragCoord.xy is fragment's window-space/screen-space coords with (0, 0) being the bottom-left corner //gl_FragCoord.z is depth value of fragment (compared to the depth buffer's content)
         FragColor.a += (depthLinearised / far) * 1.9f;
         FragColor.a = min(FragColor.a, 1.f);
     }

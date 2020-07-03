@@ -22,8 +22,15 @@ class Scene final{
         "Resources/Textures/Skyboxes/Front.png",
         "Resources/Textures/Skyboxes/Back.png"
     };
+    bool canPutOutFire;
+    bool showFire;
+    bool showTerrainNormals;
+    float elapsedTime;
+    float fogBT;
+    float terrainNormalsBT;
+    short fogType;
 	Mesh* meshes[5];
-    Model* models[14];
+    Model* models[15];
 	ShaderProg* basicShaderProg;
 	ShaderProg* explosionShaderProg;
 	ShaderProg* outlineShaderProg;
@@ -34,10 +41,8 @@ class Scene final{
     Tex cubemap;
     UniBuffer* magnitudeStorer;
     UniBuffer* brightnessStorer;
-    void DrawInstance(const Cam&, const bool&, const glm::vec3&, const glm::vec3&) const;
-    void RenderCampfire(const Cam& cam) const;
-    void RenderNormals(const Cam&, const bool&) const;
-    void RenderShiny(const Cam&, const glm::vec3&, const glm::vec3&, bool) const;
+    void RenderCampfire(const Cam& cam);
+    void RenderTerrainNormals(const Cam&) const;
     void RenderSky(const Cam&, const bool&&) const;
     void RenderTreesAndRocks(const Cam& cam) const;
     void RenderWindows(const Cam&) const;

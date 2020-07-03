@@ -2,6 +2,7 @@
 #include "LightChief.h"
 
 extern float angularFOV;
+extern float dt;
 
 Scene::Scene():
     meshes{Mesh::CreatePts(), Mesh::CreateQuad(), Mesh::CreateCube(),
@@ -19,7 +20,8 @@ Scene::Scene():
             new Model("Resources/Models/Campfire.obj"),     //10
             new Model("Resources/Models/Tent.obj"),         //11
             new Model("Resources/Models/House.obj"),        //12
-            new Model("Resources/Models/Wolf.obj") },       //13
+            new Model("Resources/Models/Wolf.obj"),         //13
+            new Model("Resources/Models/Sword.obj") },       //14
     basicShaderProg(new ShaderProg("Resources/Shaders/Basic.vs", "Resources/Shaders/Basic.fs")),
     explosionShaderProg(new ShaderProg("Resources/Shaders/Basic.vs", "Resources/Shaders/Basic.fs", "Resources/Shaders/Explosion.gs")),
     outlineShaderProg(new ShaderProg("Resources/Shaders/Basic.vs", "Resources/Shaders/Outline.fs")),
@@ -52,63 +54,72 @@ Scene::~Scene(){
     delete screenQuadShaderProg;
 }
 
-void Scene::DrawInstance(const Cam& cam, const bool& type, const glm::vec3& translate = glm::vec3(0.f), const glm::vec3& scale = glm::vec3(1.f)) const{
-    SetUnis(cam, 2 * (scale == glm::vec3(1.f)), translate, {0.f, 1.f, 0.f, 0.f}, scale);
-    (type ? models[1]->Draw(GL_TRIANGLES, 1, scale == glm::vec3(1.f)) : meshes[2]->Draw(GL_TRIANGLES, 1));
-}
-
-void Scene::RenderCampfire(const Cam& cam) const{
+void Scene::RenderCampfire(const Cam& cam){
     SetUnis(cam, 2, glm::vec3(-150.f, -100.f + 100.f * Mesh::ReadHeightMap(Mesh::heightMap, -150.f / 500.f, -10.f / 500.f), -10.f), glm::vec4(0.f, 1.f, 0.f, 0.f), glm::vec3(2.f));
     models[10]->Draw(GL_TRIANGLES, 1, 1);
 
-    quadShaderProg->Use();
-    SetUnis(cam, 0, glm::vec3(-150.f, -100.f + 100.f * Mesh::ReadHeightMap(Mesh::heightMap, -150.f / 500.f, -10.f / 500.f) + 17.5f, -10.f), {0.f, 1.f, 0.f, glm::degrees(atan2(cam.GetPos().x + 150.f, cam.GetPos().z + 10.f))}, glm::vec3(20.f, 40.f, 20.f));
-    ShaderProg::UseTex(GL_TEXTURE_2D, spriteAni->textures[0], "texSampler");
-    spriteAni->DrawSpriteAni(GL_TRIANGLES, 1);
-    ShaderProg::StopUsingTex(GL_TEXTURE_2D, spriteAni->textures[0]);
+    if(showFire){
+        //glStencilFunc(GL_ALWAYS, 1, 0xFF) //Default
+        glStencilMask(0xFF); //Set bitmask that is ANDed with stencil value abt to be written to stencil buffer //Each bit is written to the stencil buffer unchanged (bitmask of all 1s [default])
+        const bool&& mergeBorders = false;
+        const glm::vec3&& translate = glm::vec3(-150.f, -100.f + 100.f * Mesh::ReadHeightMap(Mesh::heightMap, -150.f / 500.f, -10.f / 500.f) + 17.5f, -10.f);
+        const glm::vec3&& scale = glm::vec3(20.f, 40.f, 20.f);
+        canPutOutFire = false;
+
+        quadShaderProg->Use();
+        SetUnis(cam, 0, translate, {0.f, 1.f, 0.f, glm::degrees(atan2(cam.GetPos().x + 150.f, cam.GetPos().z + 10.f))}, scale);
+        ShaderProg::UseTex(GL_TEXTURE_2D, spriteAni->textures[0], "texSampler");
+        spriteAni->DrawSpriteAni(GL_TRIANGLES, 1);
+        ShaderProg::StopUsingTex(GL_TEXTURE_2D, spriteAni->textures[0]);
+
+        glm::vec3 normal = glm::vec3(glm::rotate(glm::mat4(1.f), glm::degrees(atan2(cam.GetPos().x + 150.f, cam.GetPos().z + 10.f)), glm::vec3(0.f, 1.f, 0.f)) * glm::vec4(0.f, 0.f, 1.f, 1.f));
+        float dist = glm::dot(translate, normal);
+        glm::vec3 pt = cam.GetPos();
+        glm::vec3 dir = glm::normalize(cam.CalcFront());
+
+        float denom = glm::dot(dir, normal);
+        if(abs(denom) > 0.0001f){
+            float lambda = (dist - glm::dot(pt, normal)) / denom;
+            glm::vec3 intersectionPt = pt + lambda * dir;
+
+            ///Prevent intersection with transparent parts
+            glm::vec3 planeMaskTranslate = translate - glm::vec3(0.f, 3.f, 0.f);
+            glm::vec3 planeMaskScale = glm::vec3(8.f, 12.5f, 1.f);
+
+            if(lambda != 0.f && intersectionPt.x >= planeMaskTranslate.x + -planeMaskScale.x && intersectionPt.x <= planeMaskTranslate.x + planeMaskScale.x &&
+                intersectionPt.y >= planeMaskTranslate.y + -planeMaskScale.y && intersectionPt.y <= planeMaskTranslate.y + planeMaskScale.y){
+                canPutOutFire = true;
+                if(mergeBorders){
+                    glDepthMask(GL_FALSE);
+                }
+                glStencilFunc(GL_NOTEQUAL, 1, 0xFF); //The frag passes... and is drawn if its ref value of 1 is not equal to stencil value in the stencil buffer //++params??
+                outlineShaderProg->Use();
+                ShaderProg::SetUni3f("myRGB", glm::vec3(1.f));
+                ShaderProg::SetUni1f("myAlpha", .5f);
+                SetUnis(cam, 0, translate, {0.f, 1.f, 0.f, glm::degrees(atan2(cam.GetPos().x + 150.f, cam.GetPos().z + 10.f))}, scale + glm::vec3(5.f));
+                ShaderProg::UseTex(GL_TEXTURE_2D, spriteAni->textures[0], "outlineTex");
+                spriteAni->DrawSpriteAni(GL_TRIANGLES, 1);
+                ShaderProg::StopUsingTex(GL_TEXTURE_2D, spriteAni->textures[0]);
+                glStencilFunc(GL_ALWAYS, 1, 0xFF);
+                if(mergeBorders){
+                    glDepthMask(GL_TRUE);
+                } else{
+                    glClear(GL_STENCIL_BUFFER_BIT);
+                }
+            }
+        }
+    }
 }
 
-void Scene::RenderNormals(const Cam& cam, const bool& type) const{ //Can use to add fur //Wrong normals due to incorrectly loading vertex data, improperly specifying vertex attributes or incorrectly managing them in the shaders
+void Scene::RenderTerrainNormals(const Cam& cam) const{ //Can use to add fur //Wrong normals due to incorrectly loading vertex data, improperly specifying vertex attributes or incorrectly managing them in the shaders
     normalsShaderProg->Use();
-    ShaderProg::SetUni1f("len", .5f);
-    ShaderProg::SetUni3f("myRGB", 1.f, 1.f, 0.f);
+    ShaderProg::SetUni1f("len", 10.f);
+    ShaderProg::SetUni3f("myRGB", .3f, .3f, .3f);
+    ShaderProg::SetUni1f("myAlpha", 1.f);
     ShaderProg::SetUni1i("drawNormals", 1);
-    SetUnis(cam, 0);
-    (type ? models[0]->Draw(GL_TRIANGLES, 1, 0) : meshes[2]->Draw(GL_TRIANGLES, 1));
+    SetUnis(cam, 0, glm::vec3(0.f, -100.f, 0.f), glm::vec4(1.f, 0.f, 0.f, 0.f), glm::vec3(500.f, 100.f, 500.f));
+    meshes[3]->Draw(GL_TRIANGLES, 1);
     ShaderProg::SetUni1i("drawNormals", 0);
-}
-
-void Scene::RenderShiny(const Cam& cam, const glm::vec3& translate = glm::vec3(0.f), const glm::vec3& scale = glm::vec3(1.f), bool mergeBorders = 1) const{
-    //Default is glStencilFunc(GL_ALWAYS, 1, 0xFF)
-    //glStencilMask(0xFF); //Set bitmask that is ANDed with stencil value abt to be written to stencil buffer //Each bit is written to the stencil buffer unchanged (bitmask of all 1s [default])
-
-    basicShaderProg->Use();
-    ShaderProg::SetUni1i("reflection", 1);
-    ShaderProg::SetUni1i("useReflectionMap", 0);
-    ShaderProg::SetUni1i("emission", 1);
-    ShaderProg::UseTex(GL_TEXTURE_CUBE_MAP, cubemap, "cubemapSampler");
-    meshes[2]->textures[2].SetActiveOnMesh(1);
-    DrawInstance(cam, 0, translate);
-    ShaderProg::StopUsingTex(GL_TEXTURE_CUBE_MAP, cubemap);
-    ShaderProg::SetUni1i("emission", 0);
-    ShaderProg::SetUni1i("useReflectionMap", 0);
-    ShaderProg::SetUni1i("reflection", 0);
-
-    if(mergeBorders){
-        glDepthMask(GL_FALSE);
-    }
-    if(scale != glm::vec3(1.f)){
-        glStencilFunc(GL_NOTEQUAL, 1, 0xFF); //The frag passes... and is drawn if its ref value of 1 is not equal to stencil value in the stencil buffer //++params??
-        outlineShaderProg->Use();
-        ShaderProg::SetUni3f("myRGB", 2.1f, .7f, 1.3f);
-        DrawInstance(cam, 0, translate, scale);
-        glStencilFunc(GL_ALWAYS, 1, 0xFF);
-    }
-    if(mergeBorders){
-        glDepthMask(GL_TRUE);
-    } else{
-        glClear(GL_STENCIL_BUFFER_BIT);
-    }
 }
 
 void Scene::RenderSky(const Cam& cam, const bool&& type) const{
@@ -259,13 +270,33 @@ void Scene::Init(){
     //    LightChief::CreateLightP(glm::vec3(2.f * i), 1.f, .09f, .032f);
     //}
     LightChief::CreateLightD(glm::vec3(0.f, -1.f, 0.f));
-    //LightChief::CreateLightS(glm::vec3(0.f), glm::vec3(0.f), glm::cos(glm::radians(12.5f)), glm::cos(glm::radians(17.5f)));
+    LightChief::CreateLightS(glm::vec3(0.f), glm::vec3(0.f), glm::cos(glm::radians(12.5f)), glm::cos(glm::radians(17.5f)));
 
+    canPutOutFire = false;
+    showFire = true;
+    showTerrainNormals = false;
+    elapsedTime = fogBT = terrainNormalsBT = 0.f;
+    fogType = 1;
     magnitudeStorer = new UniBuffer(1.3f * 0.f, 0);
     brightnessStorer = new UniBuffer(.7f, 1);
 }
 
 void Scene::Update(Cam const& cam){
+    elapsedTime += dt;
+    if(GetAsyncKeyState(VK_RBUTTON) & 0x8001 && canPutOutFire){
+        showFire = false;
+    }
+    if(GetAsyncKeyState(VK_SPACE) & 0x8000 && terrainNormalsBT <= elapsedTime){
+        showTerrainNormals = !showTerrainNormals;
+        terrainNormalsBT = elapsedTime + .5f;
+    }
+    if(GetAsyncKeyState(VK_RETURN) & 0x8000 && fogBT <= elapsedTime){
+        ++fogType;
+        if(fogType == 3){
+            fogType = -1;
+        }
+        fogBT = elapsedTime + .5f;
+    }
     if(LightChief::sLights.size()){
         LightChief::sLights[0].pos = cam.GetPos();
         LightChief::sLights[0].dir = cam.CalcFront();
@@ -274,7 +305,7 @@ void Scene::Update(Cam const& cam){
 }
 
 void Scene::RenderToCreatedFB(Cam const& cam, const Tex* const& enCubemap, const uint* const& depthTexs){ //Intermediate results passed between framebuffers to remain in linear space and only the last framebuffer applies gamma correction before being sent to the monitor??
-    //glStencilMask(0x00); //Make outline overlap
+    glStencilMask(0x00); //Can make outlines overlap
 
     //if(!depthTexs){
     //    basicShaderProg->Use();
@@ -331,19 +362,19 @@ void Scene::RenderToCreatedFB(Cam const& cam, const Tex* const& enCubemap, const
     //    ShaderProg::SetUni1i("reflection", 0);
     //}
 
-    //RenderNormals(cam, 0);
-    //for(short i = 0; i < 5; ++i){
-    //    RenderShiny(cam, quadPos[i] + glm::vec3(0.f, -5.f, 0.f), glm::vec3(1.25f), 0); //Model outline??
-    //}
-
     basicShaderProg->Use();
     ///Fog
-    ShaderProg::SetUni1i("useFog", true);
+    ShaderProg::SetUni1i("useFog", fogType > -1);
     ShaderProg::SetUni3f("fog.colour", .7f, .7f, .7f);
-    ShaderProg::SetUni1f("fog.start", 800.f);
-    ShaderProg::SetUni1f("fog.end", 1000.f);
+    ShaderProg::SetUni1f("fog.start", 100.f);
+    ShaderProg::SetUni1f("fog.end", 800.f);
     ShaderProg::SetUni1f("fog.density", .001f);
-    ShaderProg::SetUni1i("fog.type", 1);
+    ShaderProg::SetUni1i("fog.type", fogType);
+
+    if(showTerrainNormals){
+        RenderTerrainNormals(cam);
+        basicShaderProg->Use();
+    }
 
     ///Not working
     //ShaderProg::SetUni1i("bump", 1);
@@ -378,11 +409,14 @@ void Scene::RenderToCreatedFB(Cam const& cam, const Tex* const& enCubemap, const
         ShaderProg::SetUni1i("reflection", 0);
     }
 
+    SetUnis(cam, 2, glm::vec3(0.f, 20.f + sin(glfwGetTime()) * 5.f, 0.f), glm::vec4(0.f, 1.f, 0.f, 0.f), glm::vec3(5.f));
+    models[14]->Draw(GL_TRIANGLES, 1, 1);
     SetUnis(cam, 2, glm::vec3(-200.f, -100.f + 100.f * Mesh::ReadHeightMap(Mesh::heightMap, -200.f / 500.f, -10.f / 500.f), -10.f), glm::vec4(0.f, 1.f, 0.f, 0.f), glm::vec3(5.f));
     models[11]->Draw(GL_TRIANGLES, 1, 1);
     SetUnis(cam, 2, glm::vec3(150.f, -100.f + 100.f * Mesh::ReadHeightMap(Mesh::heightMap, 150.f / 500.f, 180.f / 500.f) - 10.f, 180.f), glm::vec4(0.f, 1.f, 0.f, 180.f), glm::vec3(10.f));
     models[12]->Draw(GL_TRIANGLES, 1, 1);
 
+    ShaderProg::SetUni1i("bump", 1);
     SetUnis(cam, 2, glm::vec3(160.f, -100.f + 100.f * Mesh::ReadHeightMap(Mesh::heightMap, 160.f / 500.f, -70.f / 500.f), -70.f), glm::vec4(0.f, 1.f, 0.f, 0.f), glm::vec3(10.f));
     models[13]->Draw(GL_TRIANGLES, 1, 1);
     SetUnis(cam, 2, glm::vec3(220.f, -100.f + 100.f * Mesh::ReadHeightMap(Mesh::heightMap, 220.f / 500.f, -60.f / 500.f), -60.f), glm::vec4(0.f, 1.f, 0.f, 0.f), glm::vec3(10.f));
@@ -395,6 +429,7 @@ void Scene::RenderToCreatedFB(Cam const& cam, const Tex* const& enCubemap, const
     models[13]->Draw(GL_TRIANGLES, 1, 1);
     SetUnis(cam, 2, glm::vec3(180.f, -100.f + 100.f * Mesh::ReadHeightMap(Mesh::heightMap, 180.f / 500.f, 40.f / 500.f), 40.f), glm::vec4(0.f, 1.f, 0.f, 0.f), glm::vec3(10.f));
     models[13]->Draw(GL_TRIANGLES, 1, 1);
+    ShaderProg::SetUni1i("bump", 0);
 
     const uint amt = 999;
     SetUnis(cam, 2);
@@ -407,9 +442,8 @@ void Scene::RenderToCreatedFB(Cam const& cam, const Tex* const& enCubemap, const
 
     RenderTreesAndRocks(cam);
     RenderSky(cam, 1); //Draw opaque objs first so depth buffer is filled with depth values of opaque objs and hence call frag shader to render only frags which pass the early depth test (saves bandwidth as frag shader does not run for frags that fail early depth test)
-    RenderCampfire(cam);
+    RenderCampfire(cam); //Model outline??
     //RenderWindows(cam); //Draw opaque objs first so dst colour used in blend eqn is correct //Issues when too close to each other??
-
     ShaderProg::StopUsingAllTexs();
 }
 
