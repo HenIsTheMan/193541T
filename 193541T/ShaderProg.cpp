@@ -23,21 +23,10 @@ void ShaderProg::ClearShaderCache() noexcept{
 }
 
 int ShaderProg::GetUniLocation(cstr const& uniName) noexcept{
-	//if(uniLocationCache.find(uniName) != uniLocationCache.end()){ //If cached...
-	//	return uniLocationCache[uniName];
-	//}
-	//int uniLocation = glGetUniformLocation(refID, uniName); //Query location of uni
-	//uniLocationCache[uniName] = uniLocation;
-	//return uniLocation;
-
-	//if(!currShaderProg->uniLocationCache.count(uniName)){ //If not cached...
-	//	int uniLocation = glGetUniformLocation(currShaderProg->refID, uniName); //Query location of uni
-	//	currShaderProg->uniLocationCache[uniName] = uniLocation;
-	//}
-	//return currShaderProg->uniLocationCache[uniName];
-
-	int uniLocation = glGetUniformLocation(currShaderProg->refID, uniName);
-	return uniLocation;
+	if(!currShaderProg->uniLocationCache.count(str(uniName))){ //If not cached...
+		currShaderProg->uniLocationCache[str(uniName)] = glGetUniformLocation(currShaderProg->refID, uniName); //Query location of uni
+	}
+	return currShaderProg->uniLocationCache[str(uniName)];
 }
 
 void ShaderProg::Init() noexcept{

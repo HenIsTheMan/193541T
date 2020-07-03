@@ -6,7 +6,7 @@ class ShaderProg final{
 	cstr shaderFilePaths[3];
 	static uint texRefIDs[32];
 	static ShaderProg* currShaderProg;
-	std::unordered_map<cstr, int> uniLocationCache;
+	std::unordered_map<str, int> uniLocationCache;
 	static std::unordered_map<cstr, uint> shaderCache;
 
 	uint refID;

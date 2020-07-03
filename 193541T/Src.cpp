@@ -2,8 +2,9 @@
 #include "Src.h"
 #include "App.h"
 #include "Cam.h"
+#include <stdio.h>
 
-static bool __cdecl PlayMidi(const char* fileName){
+static inline bool __cdecl PlayMidi(const char* fileName){
     wchar_t buffer[256];
     swprintf_s(buffer, L"open %S type sequencer alias MUSIC", fileName);
     if(mciSendStringW(L"close all", NULL, 0, NULL) != 0){
