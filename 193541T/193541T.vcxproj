@@ -141,11 +141,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Cam.cpp" />
     <ClCompile Include="glad.c" />
     <ClCompile Include="ShaderChief.cpp" />
     <ClCompile Include="Src.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Cam.h" />
     <ClInclude Include="ShaderChief.h" />
     <ClInclude Include="Src.h" />
     <ClInclude Include="stb_image.h" />
