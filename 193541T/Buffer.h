@@ -28,13 +28,15 @@ public:
 class Framebuffer final{
 	uint refID;
 	Tex tex;
+	Tex extractedBrightnessTex;
 	Renderbuffer* RBO;
 public:
 	Framebuffer(const int&&, const int&&, const int&&, const int&&, const int&&, const int&&, const int&&);
-	void Del() const noexcept;
-	const uint& GetRefID() const noexcept;
-	const Tex& GetTex() const noexcept;
-	const Renderbuffer& GetRenderbuffer() const noexcept;
+	void Del() const;
+	const uint& GetRefID() const;
+	const Tex& GetTex() const;
+	const Tex& GetExtractedBrightnessTex() const;
+	const Renderbuffer& GetRenderbuffer() const;
 };
 
 class UniBuffer final{

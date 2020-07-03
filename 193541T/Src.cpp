@@ -2,7 +2,13 @@
 #include "Src.h"
 #include "App.h"
 #include "Cam.h"
-#include <stdio.h>
+#include <thread>
+
+bool endLoop = false;
+
+static inline const bool Key(const char& key){
+    return GetAsyncKeyState((unsigned short)key) & 0x8000;
+}
 
 static inline bool __cdecl PlayMidi(const char* fileName){
     wchar_t buffer[256];
@@ -32,21 +38,10 @@ BOOL __stdcall ConsoleEventHandler(DWORD event){
     return TRUE;
 }
 
-int main(){
-    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-    //(void)PlayMidi("Resources/Midis/Nature.mid");
-    system("Color 0A");
-    srand(uint(glfwGetTime()));
-    ::ShowWindow(::GetConsoleWindow(), SW_SHOW);
-    if(!SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleEventHandler, TRUE)){
-        printf("Failed to install console event handler!\n");
-        return -1;
-    }
-
+void MainLoop(){
     App* app = new App; //Implement Factory Method design pattern??
     Cam* cam = new Cam(glm::vec3(-20.f, 0.f, 130.f), glm::vec3(-20.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
-    while(!glfwWindowShouldClose(App::win)){ //Main loop
-        glfwSetWindowShouldClose(App::win, glfwGetKey(App::win, GLFW_KEY_ESCAPE));
+    while(!endLoop){ //Main loop
         app->Update(*cam);
         cam->Update(GLFW_KEY_Q, GLFW_KEY_E, GLFW_KEY_A, GLFW_KEY_D, GLFW_KEY_W, GLFW_KEY_S);
         app->Render(*cam);
@@ -55,4 +50,25 @@ int main(){
     }
     delete app;
     delete cam;
+}
+
+int main(){
+    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+    //(void)PlayMidi("Resources/Midis/Nature.mid");
+    //system("Color 0A");
+    srand(uint(glfwGetTime()));
+    ::ShowWindow(::GetConsoleWindow(), SW_SHOW);
+    if(!SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleEventHandler, TRUE)){
+        printf("Failed to install console event handler!\n");
+        return -1;
+    }
+
+    std::thread mainLooper(MainLoop);
+    while(!endLoop){
+        if(Key(char(27))){
+            endLoop = true;
+            break;
+        }
+    }
+    mainLooper.join();
 }

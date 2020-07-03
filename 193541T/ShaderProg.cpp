@@ -22,6 +22,7 @@ void ShaderProg::ClearShaderCache() noexcept{
 	shaderCache.clear(); //For gd practice
 }
 
+///Make non-static (so no need to use shader to preset unis)??
 int ShaderProg::GetUniLocation(cstr const& uniName) noexcept{
 	if(!currShaderProg->uniLocationCache.count(str(uniName))){ //If not cached...
 		currShaderProg->uniLocationCache[str(uniName)] = glGetUniformLocation(currShaderProg->refID, uniName); //Query location of uni
@@ -73,7 +74,7 @@ void ShaderProg::ParseShader(cstr const& fPath, const uint& shaderID) const noex
 
 void ShaderProg::Link() const noexcept{
 	int infoLogLength;
-	printf("Linking programme...\n\n");
+	puts("Linking programme...\n");
 	glLinkProgram(refID); //Vars in diff shaders are linked here too
 
 	glGetProgramiv(refID, GL_INFO_LOG_LENGTH, &infoLogLength);

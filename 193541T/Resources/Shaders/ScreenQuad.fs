@@ -8,18 +8,17 @@ in myInterface{
     vec3 FragPosWorldSpace;
 } fsIn;
 
+uniform sampler2D screenTex;
+uniform sampler2D blurredTex;
 uniform bool lineariseDepth;
 uniform float near;
 uniform float far;
 uniform int typePPE; //Type of post-processing effect
-uniform sampler2D screenTex;
-const float offset = 1.f / 300.f;
-const float gamma = 2.2f; //sRGB colour space roughly corresponds to a monitor gamma of 2.2
 
 void ApplyKernel(vec2 offsets[9], float kernel[9]){ //Apply 3x3 kernel
     FragColor = vec4(vec3(0.f), 1.f);
     for(int i = 0; i < 9; ++i){
-        FragColor.rgb += vec3(texture(screenTex, fsIn.TexCoords.st + offsets[i])) * kernel[i]; //Multiply sampled tex values with weighted kernel values and add the products
+        FragColor.rgb += vec3(texture(screenTex, fsIn.TexCoords.st + offsets[i]) + texture(blurredTex, fsIn.TexCoords.st + offsets[i])) * kernel[i]; //Multiply sampled tex values with weighted kernel values and add the products
     }
 }
 
@@ -29,6 +28,7 @@ float LineariseDepth(float depth){ //Reverse the process of projection for depth
 }
 
 void main(){
+    const float offset = 1.f / 300.f;
     vec2 offsets[9] = vec2[]( //For each surrounding texCoord
         vec2(-offset, offset), //Top left
         vec2(0.f, offset), //Top centre
@@ -41,11 +41,12 @@ void main(){
         vec2(offset, -offset) //Bottom right
     );
 
+    vec4 colResult = vec4(vec3(texture(screenTex, fsIn.TexCoords) + texture(blurredTex, fsIn.TexCoords)), texture(screenTex, fsIn.TexCoords).a); //Additive blending
     switch(typePPE){
-        case 0: FragColor = texture(screenTex, fsIn.TexCoords); break;
-        case 1: FragColor = vec4(vec3(1.f) - vec3(texture(screenTex, fsIn.TexCoords)), 1.f); break; //Colour Inversion
+        case 0: FragColor = colResult; break;
+        case 1: FragColor = vec4(vec3(1.f) - vec3(colResult), 1.f); break; //Colour Inversion
         case 2: { //Grayscale
-            FragColor = texture(screenTex, fsIn.TexCoords);
+            FragColor = colResult;
             //float avg = (FragColor.r + FragColor.g + FragColor.b) / 3.f;
             float avg = .2126f * FragColor.r + .7152f * FragColor.g + .0722f * FragColor.b; //Weighted grayscale (weighted colour channels used, most physically accurate)
             FragColor = vec4(vec3(avg), 1.f);
@@ -56,11 +57,16 @@ void main(){
         default: ApplyKernel(offsets, float[](1.f, 1.f, 1.f, 1.f, -8.f, 1.f, 1.f, 1.f, 1.f)); //Edge-detection kernel (highlights all edges and darkens the rest)
     }
     if(lineariseDepth){ //shorten?? //gamma correction??
-        float depthVal = texture(screenTex, fsIn.TexCoords).r;
+        float depthVal = colResult.r;
         FragColor = vec4(vec3(LineariseDepth(depthVal) / far), 1.f);
     }
 
+    //FragColor.rgb = FragColor.rgb / (FragColor.rgb + vec3(1.f)); //Reinhard tone mapping alg (evenly balances out colour values, tend to slightly favour bright areas)
+    const float exposure = .1f; //Default is 1.f
+    FragColor.rgb = vec3(1.f) - exp(-FragColor.rgb * exposure); //Exposure tone mapping (day and night cycle, config lighting parameters with exposure parameter [selectively favors bright or dark regions])??
+
+    const float gamma = 2.2f; //sRGB colour space roughly corresponds to a monitor gamma of 2.2
     FragColor.rgb = pow(FragColor.rgb, vec3(1.f / gamma)); //Gamma correction (makes monitor display colours as linearly set, makes dark areas show more details, need as we config colour and lighting vars in sRGB space, multiply linear input values with reciprocal of gamma to brighten them 1st)
-    //We and artists generally set colour and lighting values higher (makes most linear-space calculations wrong) since the monitor darkens intermediate... values (as human eyes are more susceptible to changes in dark colours)
+    //We generally set colour and lighting values higher (makes most linear-space calculations wrong) since the monitor darkens intermediate... values (as human eyes are more susceptible to changes in dark colours)
     //Non-linear mapping of CRT monitors outputs more pleasing brightness to our eyes //Makes clear colour lighter
 }

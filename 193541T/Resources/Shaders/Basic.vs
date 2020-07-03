@@ -33,7 +33,6 @@ uniform float time;
 
 out vec4 FragPosFromLightD;
 out vec4 FragPosFromLightS;
-//uniform bool depthOnly;??
 uniform mat4 dLightSpaceVP;
 uniform mat4 sLightSpaceVP;
 
@@ -57,8 +56,6 @@ void main(){
 	}
     FragViewSpacePos = vec3(view * model * vec4(aPos, 1.f));
 
-
-
     vec3 T = normalize(mat3(transpose(inverse(model))) * aTangent);
     //vec3 B = normalize(mat3(transpose(inverse(model))) * aBitangent); //More precise to multiply with normal matrix as only orientation of vecs matters
     vec3 N = normalize(mat3(transpose(inverse(model))) * aNormal);
@@ -68,9 +65,7 @@ void main(){
     vec3 B = cross(N, T);
 
     TBN = mat3(T, B, N);
-    //TBN = transpose(mat3(T, B, N)); //Transpose of orthogonal matrix (each axis is a perpendicular unit vec) == its inverse)
-
-
+    //TBN = transpose(mat3(T, B, N)); //Transpose of orthogonal matrix (every axis is a perpendicular unit vec) == its inverse
 
     if(useOffset){
         vec3 downscaledPos = aPos * (gl_InstanceID / 100.f); //gl_InstanceID is incremented for each instanced draw/... call

@@ -6,7 +6,7 @@ extern float dt;
 
 Scene::Scene():
     meshes{Mesh::CreatePts(), Mesh::CreateQuad(), Mesh::CreateCube(),
-        Mesh::CreateHeightMap("Resources/Textures/HeightMaps/hMap.raw", 8.f, 8.f), Mesh::CreateSlicedTexQuad(24.f, 2.f, 2.f)},
+        Mesh::CreateHeightMap("Resources/Textures/HeightMaps/hMap.raw", 8.f, 8.f), Mesh::CreateSlicedTexQuad(24.f, 2.f, 2.f)}, //Use enum struct to choose??
     models{ new Model("Resources/Models/Skydome.obj"),      //0
             new Model("Resources/Models/nanosuit.obj"),     //1
             new Model("Resources/Models/Rock0.obj"),        //2
@@ -23,6 +23,7 @@ Scene::Scene():
             new Model("Resources/Models/Sword.obj"),        //13
             new Model("Resources/Models/Wolf.obj") },       //14
     basicShaderProg(new ShaderProg("Resources/Shaders/Basic.vs", "Resources/Shaders/Basic.fs")),
+    blurShaderProg(new ShaderProg("Resources/Shaders/Blur.vs", "Resources/Shaders/Blur.fs")),
     explosionShaderProg(new ShaderProg("Resources/Shaders/Basic.vs", "Resources/Shaders/Basic.fs", "Resources/Shaders/Explosion.gs")),
     outlineShaderProg(new ShaderProg("Resources/Shaders/Basic.vs", "Resources/Shaders/Outline.fs")),
     normalsShaderProg(new ShaderProg("Resources/Shaders/Basic.vs", "Resources/Shaders/Outline.fs", "Resources/Shaders/Normals.gs")),
@@ -47,6 +48,7 @@ Scene::~Scene(){
     delete magnitudeStorer;
     delete brightnessStorer;
     delete basicShaderProg;
+    delete blurShaderProg;
     delete explosionShaderProg;
     delete outlineShaderProg;
     delete normalsShaderProg;
@@ -267,7 +269,7 @@ void Scene::Init(){
     glPointSize(50.f);
     glLineWidth(2.f);
     //for(float i = 0.f; i < 5.f; ++i){ //Point light can cover a dist of 50 (from given table)
-    //    LightChief::CreateLightP(glm::vec3(2.f * i), 1.f, .09f, .032f);
+    //    LightChief::CreateLightP(glm::vec3(0.f, -5.f, 0.f), 1.f, .09f, .032f);
     //}
     //LightChief::CreateLightD(glm::vec3(0.f, -1.f, 0.f));
     LightChief::CreateLightS(glm::vec3(0.f), glm::vec3(0.f), glm::cos(glm::radians(12.5f)), glm::cos(glm::radians(17.5f)));
@@ -278,7 +280,7 @@ void Scene::Init(){
     elapsedTime = fogBT = terrainNormalsBT = 0.f;
     fogType = -1;
     magnitudeStorer = new UniBuffer(1.3f * 0.f, 0);
-    brightnessStorer = new UniBuffer(.7f, 1);
+    brightnessStorer = new UniBuffer(.8f, 1);
 }
 
 void Scene::Update(Cam const& cam){
@@ -304,6 +306,14 @@ void Scene::Update(Cam const& cam){
     spriteAni->Update();
 }
 
+void Scene::BlurTex(const Tex& tex, const bool& horizontal) const{
+    blurShaderProg->Use();
+    ShaderProg::SetUni1i("horizontal", horizontal);
+    ShaderProg::UseTex(GL_TEXTURE_2D, tex, "texSampler");
+    meshes[1]->Draw(GL_TRIANGLES, 1);
+    ShaderProg::StopUsingTex(GL_TEXTURE_2D, tex);
+}
+
 void Scene::RenderToCreatedFB(Cam const& cam, const Tex* const& enCubemap, const Tex* const& depthTexs){ //Intermediate results passed between framebuffers to remain in linear space and only the last framebuffer applies gamma correction before being sent to the monitor??
     glStencilMask(0x00); //Can make outlines overlap
 
@@ -317,8 +327,8 @@ void Scene::RenderToCreatedFB(Cam const& cam, const Tex* const& enCubemap, const
         glm::mat4 sLightSpaceVP = glm::perspective(glm::radians(angularFOV), 1024.f / 1024.f, 20.f, 50.f) * cam.LookAt(); //Non-linear depth due to perspective division with its noticeable range close to the near plane when visualising depth buffer
         basicShaderProg->Use();
         ShaderProg::SetUni1i("depthOnly", 0);
-        ShaderProg::SetUni1i("showShadowsD", 1);
-        ShaderProg::SetUni1i("showShadowsS", 1);
+        ShaderProg::SetUni1i("showShadowsD", 0);
+        ShaderProg::SetUni1i("showShadowsS", 0);
         ShaderProg::SetUniMtx4fv("dLightSpaceVP", glm::value_ptr(dLightSpaceVP));
         ShaderProg::SetUniMtx4fv("sLightSpaceVP", glm::value_ptr(sLightSpaceVP));
         for(short i = 0; i < 2; ++i){
@@ -344,26 +354,8 @@ void Scene::RenderToCreatedFB(Cam const& cam, const Tex* const& enCubemap, const
     //    meshes[0]->Draw(GL_POINTS, 5);
     //} ShaderProg::SetUni1i("useFlatColour", 0);
 
-    //if(enCubemap){
-    //    explosionShaderProg->Use();
-    //    ShaderProg::LinkUniBlock("ExplosionUnis", 0);
-    //    ShaderProg::SetUni1f("time", (float)glfwGetTime());
-    //    ShaderProg::SetUni1i("reflection", 1);
-    //    ShaderProg::SetUni1i("useReflectionMap", 1);
-    //    ShaderProg::SetUni1i("explosion", 1);
-    //    ShaderProg::SetUni1i("bump", 0);
-    //    ShaderProg::UseTex(GL_TEXTURE_CUBE_MAP, *enCubemap, "cubemapSampler");
-    //    SetUnis(cam, 2, glm::vec3(50.f, -150.f + 50.f * Mesh::ReadHeightMap(Mesh::heightMap, 50.f / 400.f, 0.f / 400.f), 0.f), {0.f, 1.f, 0.f, 0.f}, glm::vec3(5.f));
-    //    models[1]->Draw(GL_TRIANGLES, 1, 1);
-    //    ShaderProg::StopUsingTex(GL_TEXTURE_CUBE_MAP, *enCubemap);
-    //    ShaderProg::SetUni1i("bump", 0);
-    //    ShaderProg::SetUni1i("explosion", 0);
-    //    ShaderProg::SetUni1i("useReflectionMap", 0);
-    //    ShaderProg::SetUni1i("reflection", 0);
-    //}
-
     if(showTerrainNormals){
-        RenderTerrainNormals(cam); //See through??
+        //RenderTerrainNormals(cam); //See through??
     }
     basicShaderProg->Use();
     ShaderProg::SetUni1i("useFog", fogType > -1);
@@ -405,21 +397,29 @@ void Scene::RenderToCreatedFB(Cam const& cam, const Tex* const& enCubemap, const
     SetUnis(cam, 2, glm::vec3(-20.f, 20.f + sin(glfwGetTime()) * 5.f, -10.f), glm::vec4(0.f, 1.f, 0.f, 90.f), glm::vec3(5.f));
     models[13]->Draw(GL_TRIANGLES, 1, 1);
 
-    ShaderProg::SetUni1i("bump", 1);
-    SetUnis(cam, 2, {0.f, 0.f, -20.f}, glm::vec4(1.f, 0.f, 0.f, 0.f), glm::vec3(50.f));
+    ShaderProg::SetUni1i("bump", showTerrainNormals); //Set when draw??
+    SetUnis(cam, 2, {0.f, 0.f, -20.f}, glm::vec4(1.f, 0.f, 0.f, -45.f), glm::vec3(50.f));
     meshes[1]->textures[2].SetActiveOnMesh(1);
     meshes[1]->textures[3].SetActiveOnMesh(1);
     meshes[1]->Draw(GL_TRIANGLES, 1);
 
-    if(enCubemap){
+    if(enCubemap){ //Cannot pass TBN over when using explosionShaderProg??
+        //explosionShaderProg->Use();
+        //ShaderProg::SetUni1i("bump", true);
+        //ShaderProg::LinkUniBlock("ExplosionUnis", 0);
+        //ShaderProg::SetUni1f("time", (float)glfwGetTime());
+        //ShaderProg::SetUni1i("explosion", 1);
         ShaderProg::SetUni1i("reflection", 1);
         ShaderProg::SetUni1i("useReflectionMap", 1);
         ShaderProg::UseTex(GL_TEXTURE_CUBE_MAP, *enCubemap, "cubemapSampler");
         SetUnis(cam, 2, glm::vec3(0.f, 0.f, 20.f), glm::vec4(0.f, 1.f, 0.f, 0.f), glm::vec3(10.f));
         models[1]->Draw(GL_TRIANGLES, 1, 1);
         ShaderProg::StopUsingTex(GL_TEXTURE_CUBE_MAP, *enCubemap);
+        //ShaderProg::SetUni1i("explosion", 0);
         ShaderProg::SetUni1i("useReflectionMap", 0);
         ShaderProg::SetUni1i("reflection", 0);
+        //ShaderProg::SetUni1i("bump", false);
+        //basicShaderProg->Use();
     }
 
     SetUnis(cam, 2, glm::vec3(160.f, -100.f + 100.f * Mesh::ReadHeightMap(Mesh::heightMap, 160.f / 500.f, -70.f / 500.f), -70.f), glm::vec4(0.f, 1.f, 0.f, 0.f), glm::vec3(10.f));
@@ -452,20 +452,22 @@ void Scene::RenderToCreatedFB(Cam const& cam, const Tex* const& enCubemap, const
     ShaderProg::StopUsingAllTexs();
 }
 
-void Scene::RenderToDefaultFB(const Tex& texColourBuffer, const int& typePPE, const bool& lineariseDepth, const glm::vec3& translate, const glm::vec3& scale) const{
+void Scene::RenderToDefaultFB(const Tex& screenTex, const Tex& blurredTex, const int& typePPE, const bool& lineariseDepth, const glm::vec3& translate, const glm::vec3& scale) const{
     screenQuadShaderProg->Use();
     glm::mat4 model = glm::scale(glm::translate(glm::mat4(1.f), translate), scale);
     ShaderProg::SetUniMtx4fv("model", glm::value_ptr(model), 0);
     ShaderProg::SetUni1i("screenQuad", 1);
     ShaderProg::SetUni1i("typePPE", typePPE);
-    ShaderProg::UseTex(GL_TEXTURE_2D, texColourBuffer, "screenTex");
+    ShaderProg::UseTex(GL_TEXTURE_2D, screenTex, "screenTex");
+    ShaderProg::UseTex(GL_TEXTURE_2D, blurredTex, "blurredTex");
     if(lineariseDepth){
         ShaderProg::SetUni1i("lineariseDepth", 1);
         ShaderProg::SetUni1f("near", 20.f);
         ShaderProg::SetUni1f("far", 50.f);
     }
     meshes[1]->Draw(GL_TRIANGLES, 1);
-    ShaderProg::StopUsingTex(GL_TEXTURE_2D, texColourBuffer);
+    ShaderProg::StopUsingTex(GL_TEXTURE_2D, screenTex);
+    ShaderProg::StopUsingTex(GL_TEXTURE_2D, blurredTex);
     ShaderProg::SetUni1i("screenQuad", 0);
     ShaderProg::SetUni1i("lineariseDepth", 0);
 }

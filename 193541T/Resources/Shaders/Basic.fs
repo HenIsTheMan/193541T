@@ -1,6 +1,8 @@
 #version 330 core
 
-out vec4 FragColor;
+///Multiple Render Targets (MRT, can get multiple fs outputs in 1 render pass)
+layout (location = 0) out vec4 FragColor; //Layout location specifier used (location corresponds to colour attachment of currently bound FBO the frag, that the fs is currently processing, will be rendered to [fs writes to...])
+layout (location = 1) out vec4 BrightFragColor; //...
 
 in myInterface{
     vec4 Colour;
@@ -60,17 +62,13 @@ uniform bool useReflectionMap;
 uniform bool useMat;
 const float gamma = 2.2f; //Since gamma not applied again before gamma correction as sRGB texs are alr in sRGB space (perceived as linear space by the eyes as input voltage is exponentially related to brightness [closely match how humans measure brightness as brightness is also displayed with a similar inverse pow relationship??, perceived linear brightness not equals to physical...])
 
-
-
 in mat3 TBN; //Change-of-basis matrix that transforms vecs in tangent space (local [relative to local ref frame of each primitive] to surface of each primitive, local space of the normal map's vecs) to another coord space (world space in this case so dot product makes sense as lighting vecs like lightDir and viewDir are in world space)
-vec3 normal = normalize(bump ? TBN * (vec3(texture(material.nMap, fsIn.TexCoords)) * 2.f - 1.f) : fsIn.Normal); //Reverse process of mapping normals in tangent space to colours in RGB space (n / 2.f + .5f) by mapping components of sampled colours from [0, 1] to [-1, 1]
+vec3 normal = normalize(bump ? TBN * (texture(material.nMap, fsIn.TexCoords).rgb * 2.f - 1.f) : fsIn.Normal); //Reverse process of mapping normals in tangent space to colours in RGB space (n / 2.f + .5f) by mapping components of sampled colours from [0, 1] to [-1, 1]
 //vec3 normal = normalize(bump ? texture(material.nMap, fsIn.TexCoords).rgb * 2.f - 1.f : fsIn.Normal);
 
-
-
-///Light components (grp in struct??)
+///Light components (store in class??)
 const vec3 lightAmbient = vec3(.05f); //Small value for small impact
-const vec3 lightDiffuse = vec3(.8f); //Set to desired colour of light
+const vec3 lightDiffuse = vec3(100.f); //Set to desired colour of light
 const vec3 lightSpecular = vec3(1.f);
 
 in vec3 FragPosLocalSpace;
@@ -279,4 +277,12 @@ void main(){ //Blinn-Phong lighting/reflection/shading model (angle between half
     if(wave){
         FragColor.a = .5f;
     }
+
+    float brightness = dot(FragColor.rgb, vec3(.2126f, .7152f, .0722f)); //Transform FragColor to grayscale with dot product
+    BrightFragColor = vec4(FragColor.rgb * vec3(float(brightness > 2.f)), 1.f); //2.f is brightness threshold (outside LDR with HDR rendering so more control over what is considered bright)
+
+    //Amplify and give noticeable visual cues to bright coloured regions with high light intensities with bloom (PPE, glow and light bleeding, good when subtle)
+    //Render lit scene to floating pt texColourBuffer and get the extracted brightness img. Blur... (use blur filter) then render it over the HDR scene img
+    //Visual quality of bloom affected by range and strength of the blur filter used ++ quality and type??
+    //Bright regions are extended in both width and height due to the blur filter??
 }

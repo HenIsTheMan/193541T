@@ -32,6 +32,7 @@ class Scene final{
 	Mesh* meshes[5];
     Model* models[15];
 	ShaderProg* basicShaderProg;
+	ShaderProg* blurShaderProg;
 	ShaderProg* explosionShaderProg;
 	ShaderProg* outlineShaderProg;
 	ShaderProg* normalsShaderProg;
@@ -52,6 +53,7 @@ public:
 	~Scene();
     void Init();
     void Update(Cam const&);
+    void BlurTex(const Tex& tex, const bool& horizontal) const;
     void RenderToCreatedFB(Cam const&, const Tex* const&, const Tex* const&);
-    void RenderToDefaultFB(const Tex&, const int&, const bool&, const glm::vec3 & = glm::vec3(0.f), const glm::vec3 & = glm::vec3(1.f)) const;
+    void RenderToDefaultFB(const Tex& screenTex, const Tex& blurredTex, const int& typePPE, const bool& lineariseDepth, const glm::vec3& translate = glm::vec3(0.f), const glm::vec3& scale = glm::vec3(1.f)) const;
 };

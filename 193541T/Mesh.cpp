@@ -132,37 +132,27 @@ Mesh* const Mesh::CreatePts(){
 
 Mesh* const Mesh::CreateQuad(){
     Mesh* mesh = new Mesh;
-    glm::vec3 pos0(-1.f, -1.f, 0.f);
-    glm::vec3 pos1(1.f, 1.f, 0.f);
-    glm::vec3 pos2(-1.f, 1.f, 0.f);
-    glm::vec3 pos3(1.f, -1.f, 0.f);
-    glm::vec2 uv0(0.f, 0.f);
-    glm::vec2 uv1(1.f, 1.f);
-    glm::vec2 uv2(0.f, 1.f);
-    glm::vec2 uv3(1.f, 0.f);
+    glm::vec3 pos[4]{glm::vec3(-1.f, 1.f, 0.f), glm::vec3(-1.f, -1.f, 0.f), glm::vec3(1.f, -1.f, 0.f), glm::vec3(1.f, 1.f, 0.f)};
+    glm::vec2 UVs[4]{glm::vec2(0.f, 1.f), glm::vec2(0.f, 0.f), glm::vec2(1.f, 0.f), glm::vec2(1.f, 1.f)};
 
-    glm::vec3 edge1 = pos1 - pos0;
-    glm::vec3 edge2 = pos2 - pos0;
-    glm::vec2 deltaUV1 = uv1 - uv0;
-    glm::vec2 deltaUV2 = uv2 - uv0;
-    float f = 1.f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+    glm::vec3 tangent[2], bitangent[2]; //For each vertex //T and B lie on the same plane as normal map surface and align with tex axes U and V so calc them with vertices (to get edges of...) and texCoords (since in tangent space) of primitives
+    for(short i = 0; i < 2; ++i){
+        glm::vec3 edges[2]{pos[!i ? 1 : 3] - pos[2 * i], pos[2 * !i] - pos[2 * i]};
+        glm::vec2 deltaUVs[2]{UVs[!i ? 1 : 3] - UVs[2 * i], UVs[2 * !i] - UVs[2 * i]};
+        const float&& reciprocal = 1.f / (deltaUVs[0].x * deltaUVs[1].y - deltaUVs[1].x * deltaUVs[0].y);
 
-    glm::vec3 tangent1, bitangent1; //For each vertex //T and B lie on the same plane as normal map surface and align with tex axes U and V so calc them with vertices (to get edges of...) and texCoords (since in tangent space) of primitives
-    tangent1.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
-    tangent1.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
-    tangent1.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
-    tangent1 = glm::normalize(tangent1);
+        tangent[i].x = reciprocal * (deltaUVs[1].y * edges[0].x - deltaUVs[0].y * edges[1].x);
+        tangent[i].y = reciprocal * (deltaUVs[1].y * edges[0].x - deltaUVs[0].y * edges[1].x);
+        tangent[i].z = reciprocal * (deltaUVs[1].y * edges[0].x - deltaUVs[0].y * edges[1].x);
 
-    bitangent1.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
-    bitangent1.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
-    bitangent1.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
-    bitangent1 = glm::normalize(bitangent1);
-
-    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, -1.f, 0.f), glm::vec4(0.f, 0.f, 1.f, 1.f), glm::vec2(0.f, 0.f), glm::vec3(0.f, 0.f, 1.f), tangent1, bitangent1));
-    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, 1.f, 0.f), glm::vec4(0.f, 1.f, 1.f, 1.f), glm::vec2(1.f, 1.f), glm::vec3(0.f, 0.f, 1.f), tangent1, bitangent1));
-    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, 1.f, 0.f), glm::vec4(1.f, 0.f, 0.f, 1.f), glm::vec2(0.f, 1.f), glm::vec3(0.f, 0.f, 1.f), tangent1, bitangent1));
-    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, -1.f, 0.f), glm::vec4(0.f, 1.f, 0.f, 1.f), glm::vec2(1.f, 0.f), glm::vec3(0.f, 0.f, 1.f), tangent1, bitangent1));
-    mesh->indices = new std::vector<uint>{0, 1, 2, 0, 3, 1};
+        bitangent[i].x = reciprocal * (-deltaUVs[1].x * edges[0].x + deltaUVs[0].x * edges[1].x);
+        bitangent[i].y = reciprocal * (-deltaUVs[1].x * edges[0].y + deltaUVs[0].x * edges[1].y);
+        bitangent[i].z = reciprocal * (-deltaUVs[1].x * edges[0].z + deltaUVs[0].x * edges[1].z);
+    }
+    for(short i = 0; i < 4; ++i){
+        mesh->vertices.emplace_back(Vertex(pos[i], glm::vec4(1.f), UVs[i], glm::vec3(0.f, 0.f, 1.f), tangent[!(i % 3)], bitangent[i > 1]));
+    }
+    mesh->indices = new std::vector<uint>{0, 1, 2, 0, 2, 3};
     return mesh;
 }
 
@@ -305,14 +295,14 @@ bool Mesh::LoadHeightMap(cstr file_path, std::vector<unsigned char>& heightMap){
 }
 
 float Mesh::ReadHeightMap(std::vector<unsigned char> &heightMap, float x, float z){
-    if(heightMap.size() == 0 || x <= -0.5f || x >= 0.5f || z <= -0.5f || z >= 0.5f){
+    if(heightMap.size() == 0 || x <= -.5f || x >= .5f || z <= -.5f || z >= .5f){
         return 0.f;
     }
 
     const float SCALE_FACTOR = 256.f;
     unsigned terrainSize = (unsigned)sqrt((double)heightMap.size());
-    unsigned zCoord = (unsigned)((z + 0.5f) * terrainSize);
-    unsigned xCoord = (unsigned)((x + 0.5f) * terrainSize);
+    unsigned zCoord = (unsigned)((z + .5f) * terrainSize);
+    unsigned xCoord = (unsigned)((x + .5f) * terrainSize);
 
     return (float)heightMap[zCoord * terrainSize + xCoord] / SCALE_FACTOR;
 }

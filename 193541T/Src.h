@@ -21,4 +21,4 @@
 
 typedef const char* cstr;
 typedef std::string str;
-typedef unsigned int uint;
+using uint = unsigned int;
