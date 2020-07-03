@@ -8,10 +8,11 @@ class App final{
 	friend void ScrollCallback(GLFWwindow*, double, double);
 	friend void CursorPosCallback(GLFWwindow*, double, double);
 	float lastFrame;
+	float cullBT;
 	float polyModeBT;
 	Scene* scene;
 	static bool firstCall;
-	static float pitch, yaw; //Euler angles //++roll
+	static float pitch, yaw; //Euler angles
 	static float lastX, lastY;
 	static float sensitivity;
 	static bool Key(int);

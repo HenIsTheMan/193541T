@@ -15,5 +15,5 @@ class Model{ //A model obj acts as a container for several mesh objs
 public:
     Model(cstr);
     void Draw(bool = 1, bool = 1);
-    void DrawInstanced(bool = 1, uint = 0);
+    void DrawInstanced(bool, bool, uint = 0);
 };

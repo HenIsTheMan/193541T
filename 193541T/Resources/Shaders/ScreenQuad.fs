@@ -1,22 +1,25 @@
 #version 330 core
 out vec4 FragColor;
 
-in myInterface{ //Input interface block
+in myInterface{
+    vec4 Colour;
     vec2 TexCoords;
-} fsIn; //Instance
+    vec3 Normal;
+    vec3 FragPos;
+    vec3 TexDir;
+} fsIn;
 
-uniform sampler2D screenTexture;
-
-const float offset = 1.f / 300.f; //Customisable
+uniform sampler2D screenTex;
+const float offset = 1.f / 300.f;
 
 void main(){
-    //FragColor = texture(screenTexture, fsIn.TexCoords);
+    FragColor = texture(screenTex, fsIn.TexCoords);
 
     ////Post-processing effects
-    FragColor = vec4(vec3(1.f) - vec3(texture(screenTexture, fsIn.TexCoords)), 1.f); //Colour Inversion
+    //FragColor = vec4(vec3(1.f) - vec3(texture(screenTex, fsIn.TexCoords)), 1.f); //Colour Inversion
 
     ///Grayscale
-    /*FragColor = texture(screenTexture, fsIn.TexCoords);
+    /*FragColor = texture(screenTex, fsIn.TexCoords);
     //float avg = (FragColor.r + FragColor.g + FragColor.b) / 3.f;
     float avg = 0.2126f * FragColor.r + 0.7152f * FragColor.g + 0.0722f * FragColor.b; //Weighted grayscale (weighted colour channels used, most physically accurate)
     FragColor = vec4(vec3(avg), 1.f);*/
@@ -56,7 +59,7 @@ void main(){
 
     vec3 sampleTex[9];
     for(int i = 0; i < 9; ++i){ //Tex sampling
-        sampleTex[i] = vec3(texture(screenTexture, fsIn.TexCoords.st + offsets[i]));
+        sampleTex[i] = vec3(texture(screenTex, fsIn.TexCoords.st + offsets[i]));
     }
     vec3 col = vec3(0.f);
     for(int i = 0; i < 9; ++i){

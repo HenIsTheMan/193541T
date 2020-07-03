@@ -1,15 +1,7 @@
 #include "Mesh.h"
 
-Vertex::Vertex(glm::vec3 pos, glm::vec4 colour, glm::vec2 texCoords, glm::vec3 normal){
-    this->pos = pos;
-    this->colour = colour;
-    this->texCoords = texCoords;
-    this->normal = normal;
-}
-
-Texture::Texture(uint newRefID, str newType): refID(newRefID), type(newType){}
-
 Mesh::Mesh(std::vector<Vertex> vertices, std::vector<uint> indices){
+    VAO = VBO = EBO = 0;
     this->vertices = vertices;
     this->indices = indices;
     int index = 0;
@@ -19,10 +11,9 @@ Mesh::Mesh(std::vector<Vertex> vertices, std::vector<uint> indices){
             translations[index++] = glm::vec2(x / 10.0f, y / 10.0f) + glm::vec2(offset);
         }
     }
-    SetupMesh();
 }
 
-void Mesh::SetupMesh(){ //Create and config a VAO
+void Mesh::Init(uint amt){
     glGenVertexArrays(1, &VAO); //Gen VAO and get ref ID of it
     glGenBuffers(1, &VBO); //A buffer manages a certain piece of GPU mem
     glGenBuffers(1, &EBO);
@@ -39,9 +30,6 @@ void Mesh::SetupMesh(){ //Create and config a VAO
         normal.emplace_back(vertices[i].normal);
     }
 
-
-
-    short amt = 10000; //??
     size_t size[6], biggerSize[6]{0, };
     size[0] = 0;
     size[1] = pos.size() * sizeof(glm::vec3);
@@ -54,18 +42,18 @@ void Mesh::SetupMesh(){ //Create and config a VAO
     }
 
     glm::mat4* modelMatrices = new glm::mat4[amt];
-    float radius = 15.f, offset = 2.5f;
-    for(short i = 0; i < amt; ++i){
+    float radius = 9.f, offset = 2.3f;
+    for(uint i = 0; i < amt; ++i){
         float angle = (float)i / (float)amt * 360.0f;
         float displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset; //Multi??
         ///transform x and z along the circle and randomly displace along circle with 'radius' in range [-offset, offset]??
-        glm::mat4 model = translate(glm::mat4(1.f), glm::vec3(sin(angle) * radius + displacement, displacement * 0.4f, cos(angle) * radius + displacement));
+        glm::mat4 model = translate(glm::mat4(1.f), glm::vec3(sin(angle) * radius + displacement, 10.f + displacement * 0.4f, cos(angle) * radius + displacement));
         model = rotate(model, float(rand() % 360), glm::vec3(0.4f, 0.6f, 0.8f));
         model = scale(model, glm::vec3((rand() % 21) / 100.0f + 0.05f));
         modelMatrices[i] = model;
     }
 
-    glBindVertexArray(VAO); {
+    glBindVertexArray(VAO); { //Config VAO
         glBindBuffer(GL_ARRAY_BUFFER, VBO); //Makes VBO the buffer currently bound to the GL_ARRAY_BUFFER target, GL_ARRAY_BUFFER is VBO's type
         //glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW); //Copies vertex data stored in 'vertices' into VBO's mem //Mem layout of all structs in C++ is sequential so can put &vertices[0]
         
@@ -88,7 +76,7 @@ void Mesh::SetupMesh(){ //Create and config a VAO
             if(i < 5){
                 glVertexAttribPointer(i, componentsAmt[i], GL_FLOAT, GL_FALSE, componentsAmt[i] * sizeof(float), (void*)(biggerSize[i])); //Specify a batch (112233) vertex attrib layout for the vertex arr's vertex buffer content
             } else{ //Max amt of data allowed for a vertex attrib is 4 floats so reserve 4 vertex attribs for mat4
-                glVertexAttribPointer(i, componentsAmt[i], GL_FLOAT, GL_FALSE, componentsAmt[i] * sizeof(glm::vec4), (void*)(biggerSize[5] + size_t(i - 5) * sizeof(glm::vec4)));
+                glVertexAttribPointer(i, componentsAmt[i], GL_FLOAT, GL_FALSE, componentsAmt[i] * sizeof(glm::vec4), (void*)(biggerSize[5] + ((size_t)i - 5) * sizeof(glm::vec4)));
             }
             //glVertexAttribPointer(i, componentsAmt[i], GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)((!i ? 0 : std::accumulate(componentsAmt, componentsAmt + i, 0)) * floatSize)); //Specify an interleaved (123123, diff vertex attrib data next to one another in mem per vertex) attrib layout for the vertex array buffer's content
         }
@@ -111,7 +99,7 @@ void Mesh::SetupMesh(){ //Create and config a VAO
     } glBindVertexArray(0); //Break the existing vertex arr obj binding
 }
 
-void Mesh::LoadTexture(cstr fPath, str type){ //bool gamma = 0??
+void Mesh::LoadTexture(cstr fPath, str type){
     uint refID;
     int width, height, colourChannelsAmt;
     unsigned char* data = stbi_load(fPath, &width, &height, &colourChannelsAmt, 0);
@@ -141,7 +129,10 @@ void Mesh::LoadTexture(cstr fPath, str type){ //bool gamma = 0??
     } glBindTexture(GL_TEXTURE_2D, 0); //Unbind currently bound tex from currently active tex unit
 }
 
-void Mesh::Draw(bool indexed, bool tex) const{
+void Mesh::Draw(bool indexed, bool tex){
+    if(VAO + VBO + EBO == 0){
+        Init();
+    }
     if(tex){ //Make sure each shader sampler uniform corresponds to the correct texture unit
         for(uint i = 0; i < textures.size(); ++i){
             glActiveTexture(GL_TEXTURE0 + i);
@@ -151,20 +142,39 @@ void Mesh::Draw(bool indexed, bool tex) const{
     }
     glBindVertexArray(VAO); {
         if(indexed){
-            glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, 0); //Render call //Render from index buffer rather than vertex buffer
+            glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, 0); //Render from index buffer rather than vertex buffer
         } else{
-            glDrawArrays(GL_TRIANGLES, 0, 36); //Render call
+            glDrawArrays(GL_TRIANGLES, 0, 36); //Draw/Render call
         }
     } glBindVertexArray(0); //Break the existing vertex arr obj binding
+    if(tex){
+        for(uint i = 0; i < textures.size(); ++i){
+            glActiveTexture(GL_TEXTURE0 + i);
+            glBindTexture(GL_TEXTURE_2D, 0);
+        }
+    }
 }
 
-void Mesh::DrawPts(uint amt) const{
+void Mesh::DrawPts(uint amt){
+    if(VAO + VBO + EBO == 0){
+        Init(amt);
+    }
     glBindVertexArray(VAO); {
-        glDrawArrays(GL_POINTS, 0, amt); //Draw/Render call //GL_POINTS (each vertex is a primitive and rendered as a pt) is a render primitive //GL_POINT??
-    } glBindVertexArray(0); //Break the existing vertex arr obj binding
+        glDrawArrays(GL_POINTS, 0, amt); //GL_POINTS (each vertex is a primitive and rendered as a pt) is a render primitive //GL_POINT??
+    } glBindVertexArray(0);
 }
 
-void Mesh::DrawInstanced(bool indexed, uint amt) const{ //For instanced drawing/rendering (Draw/... objs with equal mesh data in 1 draw/... call so save on CPU-to-GPU comms [slow])
+void Mesh::DrawInstanced(bool indexed, bool tex, uint amt){ //For instanced drawing/rendering (Draw/... objs with equal mesh data in 1 draw/... call so save on CPU-to-GPU comms [slow])
+    if(VAO + VBO + EBO == 0){
+        Init(amt);
+    }
+    if(tex){ //Make sure each shader sampler uniform corresponds to the correct texture unit
+        for(uint i = 0; i < textures.size(); ++i){
+            glActiveTexture(GL_TEXTURE0 + i);
+            glBindTexture(GL_TEXTURE_2D, textures[i].refID);
+            ShaderChief::SetUni1i(("material." + textures[i].type + "Map").c_str(), i);
+        }
+    }
     glBindVertexArray(VAO); {
         if(indexed){
             glDrawElementsInstanced(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, 0, amt);
@@ -172,6 +182,12 @@ void Mesh::DrawInstanced(bool indexed, uint amt) const{ //For instanced drawing/
             glDrawArraysInstanced(GL_TRIANGLES, 0, 6, amt);
         }
     } glBindVertexArray(0);
+    if(tex){
+        for(uint i = 0; i < textures.size(); ++i){
+            glActiveTexture(GL_TEXTURE0 + i);
+            glBindTexture(GL_TEXTURE_2D, 0);
+        }
+    }
 }
 
 //GLsizei(std::accumulate(componentsAmt, componentsAmt + arrSize, 0) * floatSize)

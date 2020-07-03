@@ -13,7 +13,7 @@
 #include <map>
 #include <numeric>
 #include <string>
-#include <vector> //use list instead??
+#include <vector>
 
 typedef const char* cstr;
 typedef std::string str;

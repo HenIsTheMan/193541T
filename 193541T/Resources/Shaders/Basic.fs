@@ -1,5 +1,14 @@
 #version 330 core
+
 out vec4 FragColor;
+
+in myInterface{
+    vec4 Colour;
+    vec2 TexCoords;
+    vec3 Normal;
+    vec3 FragPos;
+    vec3 TexDir;
+} fsIn;
 
 struct Mat{
     sampler2D dMap; //Sets colour the surface reflects under diffuse lighting
@@ -35,14 +44,12 @@ uniform PointLight pLights[ptLightAmt];
 uniform DirectionalLight dLight;
 uniform Spotlight sLight;
 
-in vec3 ourColour;
-in vec2 TexCoords;
-in vec3 Normal;
-in vec3 FragPos;
-vec3 normal = normalize(Normal);
+vec3 normal = normalize(fsIn.Normal);
 uniform vec3 camPos;
-uniform samplerCube skybox;
+uniform samplerCube cubemapSampler;
 uniform bool useFlatColour;
+uniform bool emission, bump, reflection;
+uniform bool cubemap;
 
 ///Light properties (++ w-component??) 
 const vec3 lightAmbient = vec3(.4f); //Ambient component of light //Small value so it has a small impact
@@ -50,26 +57,26 @@ const vec3 lightDiffuse = vec3(.8f); //Diffuse component of light //Set to desir
 const vec3 lightSpecular = vec3(1.f); //Specular component of light //Usually kept at vec3(1.f)
 
 vec3 CalcAmbient(){ //Ambient lighting (ensures objs always have colour due to light from distant light source(s))
-    return lightAmbient * texture(material.dMap, TexCoords).rgb; //Ambient component of light * that of fragment's material
+    return lightAmbient * texture(material.dMap, fsIn.TexCoords).rgb; //Ambient component of light * that of fragment's material
 }
 
 vec3 CalcDiffuse(vec3 lightDir){ //Diffuse lighting (simulates directional impact of light, light intensity is affected by facing of obj)
     float dImpact = max(dot(normal, -lightDir), 0.f); //Diffuse impact of light on curr fragment
-    return dImpact * lightDiffuse * texture(material.dMap, TexCoords).rgb; //Diffuse component (> 0.f && <= 1.f when angle between... (>= 0.f && < 90.f) || (> 270.f && <= 360.f)) of fragment
+    return dImpact * lightDiffuse * texture(material.dMap, fsIn.TexCoords).rgb; //Diffuse component (> 0.f && <= 1.f when angle between... (>= 0.f && < 90.f) || (> 270.f && <= 360.f)) of fragment
 }
 
 vec3 CalcSpecular(vec3 lightDir){ //Specular lighting (simulates bright spot of light that appears on shiny objs, specular highlights are more inclined to light colour than obj colour)
-    vec3 viewDir = normalize(FragPos - camPos);
+    vec3 viewDir = normalize(fsIn.FragPos - camPos);
     vec3 reflectDir = reflect(lightDir, normal); //Not -lightDir as reflect(...) expects the 1st vec to point from the light source to the curr fragment's pos
     float sImpact = pow(max(dot(viewDir, reflectDir), 0.f), material.shininess);
-    return sImpact * lightSpecular * texture(material.sMap, TexCoords).rgb;
+    return sImpact * lightSpecular * texture(material.sMap, fsIn.TexCoords).rgb;
 }
 
 vec3 CalcPointLight(PointLight light){ //Calc point light's contribution vec
-    vec3 lightDir = normalize(FragPos - light.pos); //Dir of directed light ray (diff vec between...)
+    vec3 lightDir = normalize(fsIn.FragPos - light.pos); //Dir of directed light ray (diff vec between...)
 
     ///Attenuation (reducing the intensity of light over the dist it travels)
-    float dist = length(FragPos - light.pos);
+    float dist = length(fsIn.FragPos - light.pos);
     float attenuation = 1.f / (light.constant + light.linear * dist + light.quadratic * dist * dist); //Better than simply a linear eqn
     return attenuation * (CalcAmbient() + CalcDiffuse(lightDir) + CalcSpecular(lightDir));
 }
@@ -80,7 +87,7 @@ vec3 CalcDirectionalLight(DirectionalLight light){ //Calc directional light's co
 }
 
 vec3 CalcSpotlight(Spotlight light){ //Calc spotlight's contribution vec
-    vec3 lightDir = normalize(FragPos - light.pos); //Dir of directed light ray (diff vec between...)
+    vec3 lightDir = normalize(fsIn.FragPos - light.pos); //Dir of directed light ray (diff vec between...)
 
     ///Soft/Smooth edges (using inner and outer cone, interpolate between outer cos and inner cos based on theta)
     float cosTheta = dot(lightDir, normalize(light.dir));
@@ -89,11 +96,14 @@ vec3 CalcSpotlight(Spotlight light){ //Calc spotlight's contribution vec
     return CalcAmbient() + CalcDiffuse(lightDir) * lightIntensity + CalcSpecular(lightDir) * lightIntensity; //Leave ambient component unaffected so length(ambient) > 0
 }
 
-uniform bool emission, bump, reflection;
-
 void main(){ //With Phong lighting model
+    if(cubemap){
+        FragColor = texture(cubemapSampler, fsIn.TexDir);
+        return;
+    }
+
     const float ratio = 1.f / 1.52f; //n of air / n of glass (ratio between refractive indices of both materials)
-    vec3 incidentRay = normalize(FragPos - camPos);
+    vec3 incidentRay = normalize(fsIn.FragPos - camPos);
     vec3 reflectedRay = reflect(incidentRay, normal);
     vec3 refractedRay1st = refract(incidentRay, normal, ratio);
     vec3 refractedRay2nd = refract(refractedRay1st, normal, 1.f / ratio); //Wrong normal??
@@ -103,15 +113,15 @@ void main(){ //With Phong lighting model
         result += CalcPointLight(pLights[i]);
     }
     if(reflection){ //For environment mapping
-        result *= mix(texture(skybox, reflectedRay).rgb, texture(skybox, refractedRay2nd).rgb, 0.5) * vec3(texture(material.rMap, TexCoords));
+        result *= mix(texture(cubemapSampler, reflectedRay).rgb, texture(cubemapSampler, refractedRay2nd).rgb, 0.5) * vec3(texture(material.rMap, fsIn.TexCoords));
     }
     if(bump){
-        result *= vec3(texture(material.nMap, TexCoords));
+        result *= vec3(texture(material.nMap, fsIn.TexCoords));
     }
     if(emission){
-        result *= vec3(texture(material.eMap, TexCoords));
+        result *= vec3(texture(material.eMap, fsIn.TexCoords));
     }
-    FragColor = vec4(useFlatColour ? ourColour : result, 1.f); //texture(...) returns colour of tex at an interpolated set of texCoords
+    FragColor = (useFlatColour ? fsIn.Colour : vec4(result, 1.f)); //texture(...) returns colour of tex at an interpolated set of texCoords
 }
 
 //Lighting, reflection, refraction and vertex movement for water rendering??

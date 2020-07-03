@@ -78,6 +78,6 @@ void Cam::SetTarget(const glm::vec3& newTarget){
 //lightPos.x = 1.0f + sin(glfwGetTime()) * 2.0f;
 //lightPos.y = sin(glfwGetTime() / 2.0f);
 
-//PTZ, ARC, FOLLOWING, TRACKING
+//PTZ, ARC, FOLLOWING, TRACKING, FLIGHT
 
 //(float)glfwGetTime() * glm::radians(20.0f), glm::vec3(1.0f, 0.3f, 0.5f)

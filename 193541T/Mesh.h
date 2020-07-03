@@ -1,32 +1,18 @@
 #pragma once
 #include "Src.h"
-#include "ShaderChief.h"
-
-struct Vertex{ //Can use to index each vertex attrib
-    Vertex(glm::vec3, glm::vec4, glm::vec2, glm::vec3);
-    glm::vec3 pos;
-    glm::vec4 colour;
-    glm::vec2 texCoords;
-    glm::vec3 normal;
-};
-
-struct Texture{
-    Texture(uint, str);
-    uint refID;
-    str type;
-};
+#include "Utility.h"
 
 class Mesh{ //Single drawable entity
     glm::vec2 translations[100];
     uint VAO, VBO, EBO; //Store ref ID
-    void SetupMesh();
+    void Init(uint = 1);
 public:
     std::vector<Vertex> vertices;
     std::vector<uint> indices;
     std::vector<Texture> textures;
     Mesh(std::vector<Vertex>, std::vector<uint>);
     void LoadTexture(cstr, str);
-    void Draw(bool, bool) const;
-    void DrawPts(uint = 1) const;
-    void DrawInstanced(bool, uint) const;
+    void Draw(bool, bool);
+    void DrawPts(uint = 1);
+    void DrawInstanced(bool, bool, uint);
 };

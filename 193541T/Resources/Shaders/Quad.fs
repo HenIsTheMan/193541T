@@ -1,11 +1,17 @@
 #version 330 core
 out vec4 FragColor;
 
-in vec2 TexCoords;
-uniform sampler2D texture1;
+in myInterface{
+    vec4 Colour;
+    vec2 TexCoords;
+    vec3 Normal;
+    vec3 FragPos;
+    vec3 TexDir; 
+} fsIn;
 
-float near = .1f;
-float far = 100.f;
+uniform sampler2D texSampler;
+const float near = .1f;
+const float far = 100.f;
 
 float LineariseDepth(float depth){ //Reverse the process of projection for depth values
     float NDC = depth * 2.f - 1.f; //Re-transform depth values in the range [0, 1] to NDC (range [-1, 1])
@@ -14,9 +20,9 @@ float LineariseDepth(float depth){ //Reverse the process of projection for depth
 
 void main(){
     float depthLinearised = LineariseDepth(gl_FragCoord.z); //gl_FragCoord.xy is fragment's window-space/screen-space coords with (0, 0) being the bottom-left corner //gl_FragCoord.z is depth value of fragment (compared to the depth buffer's content)
-    FragColor = texture(texture1, TexCoords);
+    FragColor = texture(texSampler, fsIn.TexCoords);
     /*if(FragColor.a < .1f){
-        discard; //Fragment is discarded and not stored in the color buffer
+        discard; //Discard fragments (not stored in the color buffer) over blending them for fully transparent objs so no depth issues
     }*/
     if(FragColor.a > .1f && FragColor.a < 1.f){
         FragColor.a += (depthLinearised / far) * 1.5f;

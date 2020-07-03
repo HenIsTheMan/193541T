@@ -82,16 +82,16 @@ void Model::Draw(bool indexed, bool tex){
     if(directoryHead == ""){ //Init on 1st draw/...
         Init();
     }
-    for(const auto& mesh: meshes){
+    for(auto& mesh: meshes){
         mesh.Draw(indexed, tex);
     }
 }
 
-void Model::DrawInstanced(bool indexed, uint amt){
+void Model::DrawInstanced(bool indexed, bool tex, uint amt){
     if(directoryHead == ""){ //Init on 1st draw/...
         Init();
     }
-    for(const auto& mesh: meshes){
-        mesh.DrawInstanced(indexed, amt);
+    for(auto& mesh: meshes){
+        mesh.DrawInstanced(indexed, tex, amt);
     }
 }

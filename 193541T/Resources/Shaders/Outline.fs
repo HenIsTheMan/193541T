@@ -4,14 +4,11 @@ out vec4 FragColor;
 uniform vec3 myRGB;
 //uniform float myAlpha;
 
-//framebuffer.x, framebuffer.y
-
 void main(){
 	FragColor = vec4(gl_FragCoord.y > 300 ? myRGB : vec3(1.f) - myRGB, 1.f);
 }
 
 //++ post-processing filters like Gaussian Blur??
-
 /*#version 420 core
 out vec4 FragColor;
 

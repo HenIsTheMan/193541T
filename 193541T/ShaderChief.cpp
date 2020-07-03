@@ -125,6 +125,8 @@ void ShaderChief::UseProg(){
 	if(shaderProgID == 999){
 		Init();
 	}
-	glUseProgram(shaderProgID);
-	currID = shaderProgID;
+	if(currID != shaderProgID){
+		glUseProgram(shaderProgID);
+		currID = shaderProgID;
+	}
 }

@@ -11,7 +11,7 @@ GLFWwindow* App::win = 0; //Render window
 
 float FOV = 45.f;
 
-App::App(): polyModeBT(0.f){
+App::App(): cullBT(0.f), polyModeBT(0.f){
     Init();
     scene = new Scene;
 }
@@ -20,6 +20,8 @@ App::~App(){
     delete scene;
     glDeleteFramebuffers(1, &frontFBO);
     glDeleteFramebuffers(1, &backFBO);
+    glDeleteFramebuffers(1, &enFBO);
+    glDeleteFramebuffers(1, &intermediateFBO);
     glfwTerminate(); //Clean/Del all GLFW's resources that were allocated
 }
 
@@ -167,6 +169,12 @@ void App::Update(){
     dt = currFrame - lastFrame;
     lastFrame = currFrame;
     glfwSetWindowShouldClose(win, glfwGetKey(win, GLFW_KEY_ESCAPE));
+
+    if(glfwGetKey(win, GLFW_KEY_1) && cullBT <= currFrame){
+        glIsEnabled(GL_CULL_FACE) ? glDisable(GL_CULL_FACE) : glEnable(GL_CULL_FACE);
+        cullBT = currFrame + .5f;
+    }
+
     GLint polyMode;
     glGetIntegerv(GL_POLYGON_MODE, &polyMode);
     if(glfwGetKey(win, GLFW_KEY_2) && polyModeBT <= currFrame){

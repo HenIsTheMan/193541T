@@ -2,10 +2,21 @@
 layout (triangles) in;
 layout (triangle_strip, max_vertices = 3) out;
 
-in myInterface{ //Output interface block
+in myInterface{
+    vec4 Colour;
     vec2 TexCoords;
+    vec3 Normal;
+    vec3 FragPos;
+    vec3 TexDir;
 } gsIn[];
-out vec2 TexCoords;
+
+out myInterface{
+    vec4 Colour;
+    vec2 TexCoords;
+    vec3 Normal;
+    vec3 FragPos;
+    vec3 TexDir;
+} gsOut;
 
 uniform float magnitude;
 uniform float time;
@@ -21,18 +32,10 @@ vec3 GetNormal(){
 
 void main(){
     vec3 normal = GetNormal();
-
-    gl_Position = Explode(gl_in[0].gl_Position, normal);
-    TexCoords = gsIn[0].TexCoords;
-    EmitVertex();
-
-    gl_Position = Explode(gl_in[1].gl_Position, normal);
-    TexCoords = gsIn[1].TexCoords;
-    EmitVertex();
-
-    gl_Position = Explode(gl_in[2].gl_Position, normal);
-    TexCoords = gsIn[2].TexCoords;
-    EmitVertex();
-
+    for(int i = 0; i < 3; ++i){
+        gl_Position = Explode(gl_in[i].gl_Position, normal);
+        gsOut.TexCoords = gsIn[i].TexCoords;
+        EmitVertex();
+    }
     EndPrimitive();
 }
