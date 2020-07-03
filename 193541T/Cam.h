@@ -1,24 +1,16 @@
 #pragma once
 #include "Src.h"
-
-struct Inputs{
-	Inputs();
-	float upDown, leftRight, frontBack;
-};
+#include "Mesh.h"
+#include "ShaderChief.h"
 
 class Cam final{
-	friend int main();
-	float spd;
 	glm::vec3 pos, target, defaultPos, defaultTarget;
-	Inputs inputs;
 public:
-	Cam(glm::vec3, glm::vec3);
-	glm::mat4 LookAt() const;
+	friend int main();
+	friend void setUniforms(const Cam&, glm::vec3[]);
+	Cam(const glm::vec3&, const glm::vec3&);
 	glm::vec3 CalcFront(bool = 1) const, CalcRight() const, CalcUp() const;
-	void Update(float, float);
+	glm::mat4 LookAt() const;
+	void Update(const int&, const int&, const int&, const int&, const int&, const int&);
 	void Reset();
-	void SetSpd(float);
-	void SetPos(glm::vec3), SetTarget(glm::vec3);
-
-	//++ func overloading
 };

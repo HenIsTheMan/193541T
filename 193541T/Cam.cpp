@@ -1,10 +1,7 @@
 #include "Cam.h"
+#include "App.h"
 
-Inputs::Inputs(){
-	upDown = leftRight = frontBack = 0.f;
-}
-
-Cam::Cam(glm::vec3 newPos, glm::vec3 newTarget): spd(0.f){
+Cam::Cam(const glm::vec3& newPos, const glm::vec3& newTarget){
 	pos = defaultPos = newPos;
 	target = defaultTarget = newTarget;
 }
@@ -14,10 +11,10 @@ glm::mat4 Cam::LookAt() const{ //Translate the scene
 	glm::vec3 vecArr[]{right, up, back};
 	glm::mat4 translation = glm::mat4(1.0f), rotation = glm::mat4(1.0f);
 	for(short i = 0; i < 3; ++i){ //Access elements as mat[col][row] due to column-major order
-		translation[3][i] = -pos[i];
-		for(short j = 0; j < 3; ++j){
-			rotation[i][j] = (vecArr[j])[i];
-		}
+	    translation[3][i] = -pos[i];
+	    for(short j = 0; j < 3; ++j){
+	        rotation[i][j] = (vecArr[j])[i];
+	    }
 	}
 	return rotation * translation;
 }
@@ -31,24 +28,22 @@ glm::vec3 Cam::CalcRight() const{
 }
 
 glm::vec3 Cam::CalcUp() const{
-	return glm::cross(CalcRight(), CalcFront());
+	return glm::cross(CalcFront(), CalcRight());
 }
 
-void Cam::Update(float pitch, float yaw){
-	glm::vec3 front;
-	front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch)); //why??
-	front.y = sin(glm::radians(pitch));
-	front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch)); //why??
-	target = pos + glm::normalize(front);
+void Cam::Update(const int& up, const int& down, const int& left, const int& right, const int& front, const int& back){
+	float pitch = glm::radians(App::pitch), yaw = glm::radians(App::yaw);
+	glm::vec3 camFront(cos(yaw) * cos(pitch), sin(pitch), sin(yaw) * cos(pitch)); //why??
+	target = pos + glm::normalize(camFront);
 
-	pos += inputs.upDown * spd * CalcUp();
-	target += inputs.upDown * spd * CalcUp();
-	pos += inputs.leftRight * spd * CalcRight();
-	target += inputs.leftRight * spd * CalcRight();
-	pos += inputs.frontBack * spd * CalcFront();
-	target += inputs.frontBack * spd * CalcFront();
-
-	//pos = glm::rotate(glm::mat4(1.0f), (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f)) * pos;
+	float spd = 2.5f * App::dt; //Why cannot double??
+	float upDown = float(App::Key(up) - App::Key(down)), leftRight = float(App::Key(left) - App::Key(right)), frontBack = float(App::Key(front) - App::Key(back));
+	pos += upDown * spd * CalcUp();
+	target += upDown * spd * CalcUp();
+	pos += leftRight * spd * CalcRight();
+	target += leftRight * spd * CalcRight();
+	pos += frontBack * spd * CalcFront();
+	target += frontBack * spd * CalcFront();
 }
 
 void Cam::Reset(){
@@ -56,27 +51,10 @@ void Cam::Reset(){
 	target = defaultTarget;
 }
 
-void Cam::SetSpd(float newSpd){
-	spd = newSpd;
-}
-
-void Cam::SetPos(glm::vec3 newPos){
-	pos = newPos;
-}
-
-void Cam::SetTarget(glm::vec3 newTarget){
-	target = newTarget;
-}
-
 //const float radius = 10.0f;
-/////why??
-//cameraPos.x = (float)sin(glfwGetTime()) * radius;
-//cameraPos.z = (float)cos(glfwGetTime()) * radius;
-
-//((float)sin(glfwGetTime()) / 2.f) + .5f /*0.f - 1.f*/
-
-//glm::mat4 trans = glm::mat4(1.0f);
-//trans = glm::rotate(trans, glm::radians(90.0f), glm::vec3(0.0, 0.0, 1.0)); //why??
-//trans = glm::scale(trans, glm::vec3(0.5, 0.5, 0.5));
+//pos.x = (float)sin(glfwGetTime()) * radius;
+//pos.z = (float)cos(glfwGetTime()) * radius;
 
 //PTZ, ARC, FOLLOWING, TRACKING
+
+//(float)glfwGetTime() * glm::radians(20.0f), glm::vec3(1.0f, 0.3f, 0.5f)
