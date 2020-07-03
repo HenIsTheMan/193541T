@@ -3,14 +3,18 @@
 
 class ShaderChief final{
 	uint shaderProgID;
-public:
-	ShaderChief(cstr, cstr);
-	~ShaderChief();
-	uint GetShaderProgID() const;
-	void ParseShader(cstr, uint&) const;
+	void ParseShader(cstr, uint) const;
 	void AttachShader(uint) const;
 	void LinkProg() const;
 	void UseProg() const;
 	void DeleteShader(uint) const;
-	void SetUni() const;
+public:
+	ShaderChief(cstr, cstr);
+	~ShaderChief();
+
+	///Utility functions
+	void SetUni(cstr, float) const;
+	void SetUni(cstr, float*) const;
+	//void SetUni(cstr, float[4]) const;
+	void SetUni(cstr, int) const;
 };

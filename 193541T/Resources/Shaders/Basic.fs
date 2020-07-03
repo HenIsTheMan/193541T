@@ -1,8 +1,14 @@
 #version 330 core
-out vec4 FragColor; //Name can vary
+out vec4 FragColor;
+  
+in vec3 ourColor;
+in vec2 TexCoord;
 
-uniform vec4 ourColor;
+uniform float proportion;
+///Arr??
+uniform sampler2D texture1;
+uniform sampler2D texture2;
 
 void main(){
-    FragColor = ourColor;
-} 
+    FragColor = mix(texture(texture1, TexCoord), texture(texture2, TexCoord), proportion) * vec4(ourColor, 1.f); //texture(...) returns the filtered color of the texture at an interpolated set of texture coordinates
+}

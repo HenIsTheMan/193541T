@@ -16,24 +16,19 @@ ShaderChief::~ShaderChief(){
 	glDeleteProgram(shaderProgID);
 }
 
-uint ShaderChief::GetShaderProgID() const{
-	return shaderProgID;
-}
-
-void ShaderChief::ParseShader(cstr fPath, uint& shaderID) const{
+void ShaderChief::ParseShader(cstr fPath, uint shaderID) const{
 	int infoLogLength;
 	str srcCodeStr, line;
 	std::ifstream stream(fPath);
 
-	if(stream.is_open()){
-		while(getline(stream, line)){
-			srcCodeStr += "\n" + line;
-		}
-		stream.close();
-	} else{
+	if(!stream.is_open()){
 		printf("Failed to open and read \"%s\"\n", fPath);
 		return;
 	}
+	while(getline(stream, line)){
+		srcCodeStr += "\n" + line;
+	}
+	stream.close();
 
 	printf("Compiling \"%s\"...\n", fPath);
 	cstr srcCodeCStr = srcCodeStr.c_str();
@@ -53,7 +48,7 @@ void ShaderChief::AttachShader(uint shaderID) const{
 
 void ShaderChief::LinkProg() const{
 	int infoLogLength;
-	printf("Linking programme...");
+	printf("Linking programme...\n");
 	glLinkProgram(shaderProgID); //Vars in diff shaders are linked here too
 
 	glGetProgramiv(shaderProgID, GL_INFO_LOG_LENGTH, &infoLogLength);
@@ -72,4 +67,38 @@ void ShaderChief::DeleteShader(uint shaderID) const{
 	glDeleteShader(shaderID);
 }
 
-void ShaderChief::SetUni() const{}
+void ShaderChief::SetUni(cstr uniName, float value) const{
+	int uniLocation = glGetUniformLocation(shaderProgID, uniName); //Query location of uniform
+	if(uniLocation != -1){
+		glUniform1f(uniLocation, value); //Sets uniform on the currently active shader prog
+	} else{
+		printf("Failed to find '%s'\n", uniName);
+	}
+}
+
+void ShaderChief::SetUni(cstr uniName, float* address) const{
+	int uniLocation = glGetUniformLocation(shaderProgID, uniName); //Query location of uniform
+	if(uniLocation != -1){
+		glUniformMatrix4fv(uniLocation, 1, GL_FALSE, address); //Sets uniform on the currently active shader prog
+	} else{
+		printf("Failed to find '%s'\n", uniName);
+	}
+}
+
+//void ShaderChief::SetUni(cstr uniName, float values[4]) const{
+//	int uniLocation = glGetUniformLocation(shaderProgID, uniName); //Query location of uniform
+//	if(uniLocation != -1){
+//		glUniform4f(uniLocation, values[0], values[1], values[2], values[3]); //Sets uniform on the currently active shader prog
+//	} else{
+//		printf("Failed to find '%s'\n", uniName);
+//	}
+//}
+
+void ShaderChief::SetUni(cstr uniName, int value) const{
+	int uniLocation = glGetUniformLocation(shaderProgID, uniName); //Query location of uniform
+	if(uniLocation != -1){
+		glUniform1i(uniLocation, value); //Sets uniform on the currently active shader prog
+	} else{
+		printf("Failed to find '%s'\n", uniName);
+	}
+}
