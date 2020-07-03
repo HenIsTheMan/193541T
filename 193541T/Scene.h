@@ -46,12 +46,12 @@ class Scene final{
     void RenderSky(const Cam&, const bool&&) const;
     void RenderTreesAndRocks(const Cam& cam) const;
     void RenderWindows(const Cam&) const;
-    void SetUnis(const Cam&, short = 0, const glm::vec3& = glm::vec3(0.f), const glm::vec4& = {0.f, 1.f, 0.f, 0.f}, const glm::vec3& = glm::vec3(1.f)) const;
+    void SetUnis(const Cam&, const short& = 0, const glm::vec3& = glm::vec3(0.f), const glm::vec4& = {0.f, 1.f, 0.f, 0.f}, const glm::vec3& = glm::vec3(1.f)) const;
 public:
 	Scene();
 	~Scene();
     void Init();
     void Update(Cam const&);
-    void RenderToCreatedFB(Cam const&, const Tex* const&, const uint* const&);
-    void RenderToDefaultFB(const Tex&, const int&, const glm::vec3& = glm::vec3(0.f), const glm::vec3& = glm::vec3(1.f)) const;
+    void RenderToCreatedFB(Cam const&, const Tex* const&, const Tex* const&);
+    void RenderToDefaultFB(const Tex&, const int&, const bool&, const glm::vec3 & = glm::vec3(0.f), const glm::vec3 & = glm::vec3(1.f)) const;
 };

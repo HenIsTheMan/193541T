@@ -8,6 +8,9 @@ in myInterface{
     vec3 FragPosWorldSpace;
 } fsIn;
 
+uniform bool lineariseDepth;
+uniform float near;
+uniform float far;
 uniform int typePPE; //Type of post-processing effect
 uniform sampler2D screenTex;
 const float offset = 1.f / 300.f;
@@ -18,6 +21,11 @@ void ApplyKernel(vec2 offsets[9], float kernel[9]){ //Apply 3x3 kernel
     for(int i = 0; i < 9; ++i){
         FragColor.rgb += vec3(texture(screenTex, fsIn.TexCoords.st + offsets[i])) * kernel[i]; //Multiply sampled tex values with weighted kernel values and add the products
     }
+}
+
+float LineariseDepth(float depth){ //Reverse the process of projection for depth values
+    float NDC = depth * 2.f - 1.f; //Re-transform depth values in the range [0, 1] to NDC (range [-1, 1])
+    return (2.f * near * far) / (far + near - NDC * (far - near));	//Reverse non-linear eqn from the projection matrix and apply this inversed transformation eqn
 }
 
 void main(){
@@ -46,6 +54,10 @@ void main(){
         case 3: ApplyKernel(offsets, float[](-1, -1, -1, -1, 9, -1, -1, -1, -1)); break; //Sharpen kernel (sharpens each colour value by sampling all surrounding pixels)
         case 4: ApplyKernel(offsets, float[](.0625f, .125f, .0625f, .125f, .25f, .125f, .0625f, .125f, .0625f)); break; //Blur kernel (vary blur amt over time for drunk effect, can use blur for smoothing colour values) //Because all values add up to 16, directly returning the combined sampled colors would result in an extremely bright color so we have to divide each value of the kernel by 16??
         default: ApplyKernel(offsets, float[](1.f, 1.f, 1.f, 1.f, -8.f, 1.f, 1.f, 1.f, 1.f)); //Edge-detection kernel (highlights all edges and darkens the rest)
+    }
+    if(lineariseDepth){ //shorten?? //gamma correction??
+        float depthVal = texture(screenTex, fsIn.TexCoords).r;
+        FragColor = vec4(vec3(LineariseDepth(depthVal) / far), 1.f);
     }
 
     FragColor.rgb = pow(FragColor.rgb, vec3(1.f / gamma)); //Gamma correction (makes monitor display colours as linearly set, makes dark areas show more details, need as we config colour and lighting vars in sRGB space, multiply linear input values with reciprocal of gamma to brighten them 1st)

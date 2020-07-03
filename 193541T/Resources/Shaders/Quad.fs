@@ -10,7 +10,7 @@ in myInterface{
 
 uniform sampler2D texSampler;
 const float near = .1f;
-const float far = 100.f;
+const float far = 9999.f;
 
 float LineariseDepth(float depth){ //Reverse the process of projection for depth values
     float NDC = depth * 2.f - 1.f; //Re-transform depth values in the range [0, 1] to NDC (range [-1, 1])
@@ -27,7 +27,7 @@ void main(){
         return;
     } else if(FragColor.a < 1.f){
         float depthLinearised = LineariseDepth(gl_FragCoord.z); //gl_FragCoord.xy is fragment's window-space/screen-space coords with (0, 0) being the bottom-left corner //gl_FragCoord.z is depth value of fragment (compared to the depth buffer's content)
-        FragColor.a += (depthLinearised / far) * 1.9f;
+        FragColor.a = (depthLinearised / far) * 50.f + .5f;
         FragColor.a = min(FragColor.a, 1.f);
     }
 

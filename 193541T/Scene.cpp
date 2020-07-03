@@ -20,8 +20,8 @@ Scene::Scene():
             new Model("Resources/Models/Campfire.obj"),     //10
             new Model("Resources/Models/Tent.obj"),         //11
             new Model("Resources/Models/House.obj"),        //12
-            new Model("Resources/Models/Wolf.obj"),         //13
-            new Model("Resources/Models/Sword.obj") },       //14
+            new Model("Resources/Models/Sword.obj"),        //13
+            new Model("Resources/Models/Wolf.obj") },       //14
     basicShaderProg(new ShaderProg("Resources/Shaders/Basic.vs", "Resources/Shaders/Basic.fs")),
     explosionShaderProg(new ShaderProg("Resources/Shaders/Basic.vs", "Resources/Shaders/Basic.fs", "Resources/Shaders/Explosion.gs")),
     outlineShaderProg(new ShaderProg("Resources/Shaders/Basic.vs", "Resources/Shaders/Outline.fs")),
@@ -269,14 +269,14 @@ void Scene::Init(){
     //for(float i = 0.f; i < 5.f; ++i){ //Point light can cover a dist of 50 (from given table)
     //    LightChief::CreateLightP(glm::vec3(2.f * i), 1.f, .09f, .032f);
     //}
-    LightChief::CreateLightD(glm::vec3(0.f, -1.f, 0.f));
+    //LightChief::CreateLightD(glm::vec3(0.f, -1.f, 0.f));
     LightChief::CreateLightS(glm::vec3(0.f), glm::vec3(0.f), glm::cos(glm::radians(12.5f)), glm::cos(glm::radians(17.5f)));
 
     canPutOutFire = false;
     showFire = true;
     showTerrainNormals = false;
     elapsedTime = fogBT = terrainNormalsBT = 0.f;
-    fogType = 1;
+    fogType = -1;
     magnitudeStorer = new UniBuffer(1.3f * 0.f, 0);
     brightnessStorer = new UniBuffer(.7f, 1);
 }
@@ -304,36 +304,36 @@ void Scene::Update(Cam const& cam){
     spriteAni->Update();
 }
 
-void Scene::RenderToCreatedFB(Cam const& cam, const Tex* const& enCubemap, const uint* const& depthTexs){ //Intermediate results passed between framebuffers to remain in linear space and only the last framebuffer applies gamma correction before being sent to the monitor??
+void Scene::RenderToCreatedFB(Cam const& cam, const Tex* const& enCubemap, const Tex* const& depthTexs){ //Intermediate results passed between framebuffers to remain in linear space and only the last framebuffer applies gamma correction before being sent to the monitor??
     glStencilMask(0x00); //Can make outlines overlap
 
-    //if(!depthTexs){
-    //    basicShaderProg->Use();
-    //    ShaderProg::SetUni1i("depthOnly", 1);
-    //    explosionShaderProg->Use();
-    //    ShaderProg::SetUni1i("depthOnly", 1);
-    //} else{
-    //    Cam dCam = Cam(glm::vec3(-2.f, 4.f, -1.f), glm::vec3(0.f));
-    //    glm::mat4 dLightSpaceVP = glm::ortho(-10.f, 10.f, -10.f, 10.f, 1.f, 7.5f) * dCam.LookAt(); //Ensure projection frustum size is correct so no fragments of objs are clipped (fragments of objs not in the depth/... map will not produce shadows)
-    //    glm::mat4 sLightSpaceVP = glm::perspective(glm::radians(angularFOV), 1024.f / 1024.f, 1.f, 50.f) * cam.LookAt(); //Depth is non-linear with perspective projection
-    //    //glm::length(cam.GetPos()) / 50.f, glm::length(cam.GetPos()) * 20.f
-    //    basicShaderProg->Use();
-    //    ShaderProg::SetUni1i("depthOnly", 0);
-    //    ShaderProg::SetUni1i("showShadows", 0);
-    //    ShaderProg::SetUniMtx4fv("dLightSpaceVP", glm::value_ptr(dLightSpaceVP));
-    //    ShaderProg::SetUniMtx4fv("sLightSpaceVP", glm::value_ptr(sLightSpaceVP));
-    //    //for(short i = 0; i < 2; ++i){ //why reflect red??
-    //    //    ShaderProg::UseTex(GL_TEXTURE_2D, depthTexs[i], ~i & 1 ? "shadowMapD" : "shadowMapS");
-    //    //}
-    //    explosionShaderProg->Use();
-    //    ShaderProg::SetUni1i("depthOnly", 0);
-    //    ShaderProg::SetUni1i("showShadows", 0);
-    //    ShaderProg::SetUniMtx4fv("dLightSpaceVP", glm::value_ptr(dLightSpaceVP));
-    //    ShaderProg::SetUniMtx4fv("sLightSpaceVP", glm::value_ptr(sLightSpaceVP));
-    //    //for(short i = 0; i < 2; ++i){ //why reflect red??
-    //    //    ShaderProg::UseTex(GL_TEXTURE_2D, depthTexs[i], ~i & 1 ? "shadowMapD" : "shadowMapS");
-    //    //}
-    //}
+    if(!depthTexs){ //For vs too??
+        basicShaderProg->Use();
+        ShaderProg::SetUni1i("depthOnly", 1);
+        //explosionShaderProg->Use();
+        //ShaderProg::SetUni1i("depthOnly", 1);
+    } else{
+        glm::mat4 dLightSpaceVP = glm::ortho(-280.f, 280.f, -280.f, 280.f, .1f, 300.f) * Cam(glm::vec3(0.f, 5.f, 0.f), glm::vec3(0.f), glm::vec3(0.f, 0.f, 1.f), 0).LookAt(); //Ensure projection frustum size is correct so no fragments of objs are clipped (fragments of objs not in the depth/... map will not produce shadows)
+        glm::mat4 sLightSpaceVP = glm::perspective(glm::radians(angularFOV), 1024.f / 1024.f, 20.f, 50.f) * cam.LookAt(); //Non-linear depth due to perspective division with its noticeable range close to the near plane when visualising depth buffer
+        basicShaderProg->Use();
+        ShaderProg::SetUni1i("depthOnly", 0);
+        ShaderProg::SetUni1i("showShadowsD", 1);
+        ShaderProg::SetUni1i("showShadowsS", 1);
+        ShaderProg::SetUniMtx4fv("dLightSpaceVP", glm::value_ptr(dLightSpaceVP));
+        ShaderProg::SetUniMtx4fv("sLightSpaceVP", glm::value_ptr(sLightSpaceVP));
+        for(short i = 0; i < 2; ++i){
+            ShaderProg::UseTex(GL_TEXTURE_2D, depthTexs[i], ~i & 1 ? "shadowMapD" : "shadowMapS");
+        }
+        //explosionShaderProg->Use();
+        //ShaderProg::SetUni1i("depthOnly", 0);
+        //ShaderProg::SetUni1i("showShadowsD", 1);
+        //ShaderProg::SetUni1i("showShadowsS", 0);
+        //ShaderProg::SetUniMtx4fv("dLightSpaceVP", glm::value_ptr(dLightSpaceVP));
+        //ShaderProg::SetUniMtx4fv("sLightSpaceVP", glm::value_ptr(sLightSpaceVP));
+        //for(short i = 0; i < 2; ++i){
+        //    ShaderProg::UseTex(GL_TEXTURE_2D, depthTexs[i], ~i & 1 ? "shadowMapD" : "shadowMapS");
+        //}
+    }
 
     //ShaderProg::SetUni1i("useFlatColour", 1); {
     //    ShaderProg::SetUni1i("useOffset", 1); {
@@ -362,27 +362,16 @@ void Scene::RenderToCreatedFB(Cam const& cam, const Tex* const& enCubemap, const
     //    ShaderProg::SetUni1i("reflection", 0);
     //}
 
+    if(showTerrainNormals){
+        RenderTerrainNormals(cam); //See through??
+    }
     basicShaderProg->Use();
-    ///Fog
     ShaderProg::SetUni1i("useFog", fogType > -1);
     ShaderProg::SetUni3f("fog.colour", .7f, .7f, .7f);
     ShaderProg::SetUni1f("fog.start", 100.f);
     ShaderProg::SetUni1f("fog.end", 800.f);
     ShaderProg::SetUni1f("fog.density", .001f);
     ShaderProg::SetUni1i("fog.type", fogType);
-
-    if(showTerrainNormals){
-        RenderTerrainNormals(cam);
-        basicShaderProg->Use();
-    }
-
-    ///Not working
-    //ShaderProg::SetUni1i("bump", 1);
-    //SetUnis(cam, 2, {0.f, 0.f, -20.f}, glm::vec4(1.f, 0.f, 0.f, -90.f), glm::vec3(5.f));
-    //meshes[1]->textures[2].SetActiveOnMesh(1);
-    //meshes[1]->textures[3].SetActiveOnMesh(1);
-    //meshes[1]->Draw(GL_TRIANGLES, 1);
-    //ShaderProg::SetUni1i("bump", 0);
 
     ///Render terrain
     ShaderProg::SetUni1i("useMultiTex", 1);
@@ -409,36 +398,52 @@ void Scene::RenderToCreatedFB(Cam const& cam, const Tex* const& enCubemap, const
         ShaderProg::SetUni1i("reflection", 0);
     }
 
-    SetUnis(cam, 2, glm::vec3(0.f, 20.f + sin(glfwGetTime()) * 5.f, 0.f), glm::vec4(0.f, 1.f, 0.f, 0.f), glm::vec3(5.f));
-    models[14]->Draw(GL_TRIANGLES, 1, 1);
     SetUnis(cam, 2, glm::vec3(-200.f, -100.f + 100.f * Mesh::ReadHeightMap(Mesh::heightMap, -200.f / 500.f, -10.f / 500.f), -10.f), glm::vec4(0.f, 1.f, 0.f, 0.f), glm::vec3(5.f));
     models[11]->Draw(GL_TRIANGLES, 1, 1);
     SetUnis(cam, 2, glm::vec3(150.f, -100.f + 100.f * Mesh::ReadHeightMap(Mesh::heightMap, 150.f / 500.f, 180.f / 500.f) - 10.f, 180.f), glm::vec4(0.f, 1.f, 0.f, 180.f), glm::vec3(10.f));
     models[12]->Draw(GL_TRIANGLES, 1, 1);
+    SetUnis(cam, 2, glm::vec3(-20.f, 20.f + sin(glfwGetTime()) * 5.f, -10.f), glm::vec4(0.f, 1.f, 0.f, 90.f), glm::vec3(5.f));
+    models[13]->Draw(GL_TRIANGLES, 1, 1);
 
     ShaderProg::SetUni1i("bump", 1);
+    SetUnis(cam, 2, {0.f, 0.f, -20.f}, glm::vec4(1.f, 0.f, 0.f, 0.f), glm::vec3(50.f));
+    meshes[1]->textures[2].SetActiveOnMesh(1);
+    meshes[1]->textures[3].SetActiveOnMesh(1);
+    meshes[1]->Draw(GL_TRIANGLES, 1);
+
+    if(enCubemap){
+        ShaderProg::SetUni1i("reflection", 1);
+        ShaderProg::SetUni1i("useReflectionMap", 1);
+        ShaderProg::UseTex(GL_TEXTURE_CUBE_MAP, *enCubemap, "cubemapSampler");
+        SetUnis(cam, 2, glm::vec3(0.f, 0.f, 20.f), glm::vec4(0.f, 1.f, 0.f, 0.f), glm::vec3(10.f));
+        models[1]->Draw(GL_TRIANGLES, 1, 1);
+        ShaderProg::StopUsingTex(GL_TEXTURE_CUBE_MAP, *enCubemap);
+        ShaderProg::SetUni1i("useReflectionMap", 0);
+        ShaderProg::SetUni1i("reflection", 0);
+    }
+
     SetUnis(cam, 2, glm::vec3(160.f, -100.f + 100.f * Mesh::ReadHeightMap(Mesh::heightMap, 160.f / 500.f, -70.f / 500.f), -70.f), glm::vec4(0.f, 1.f, 0.f, 0.f), glm::vec3(10.f));
-    models[13]->Draw(GL_TRIANGLES, 1, 1);
+    models[14]->Draw(GL_TRIANGLES, 1, 1);
     SetUnis(cam, 2, glm::vec3(220.f, -100.f + 100.f * Mesh::ReadHeightMap(Mesh::heightMap, 220.f / 500.f, -60.f / 500.f), -60.f), glm::vec4(0.f, 1.f, 0.f, 0.f), glm::vec3(10.f));
-    models[13]->Draw(GL_TRIANGLES, 1, 1);
+    models[14]->Draw(GL_TRIANGLES, 1, 1);
     SetUnis(cam, 2, glm::vec3(190.f, -100.f + 100.f * Mesh::ReadHeightMap(Mesh::heightMap, 190.f / 500.f, -30.f / 500.f), -30.f), glm::vec4(0.f, 1.f, 0.f, 0.f), glm::vec3(10.f));
-    models[13]->Draw(GL_TRIANGLES, 1, 1);
+    models[14]->Draw(GL_TRIANGLES, 1, 1);
     SetUnis(cam, 2, glm::vec3(230.f, -100.f + 100.f * Mesh::ReadHeightMap(Mesh::heightMap, 230.f / 500.f, 10.f / 500.f), 10.f), glm::vec4(0.f, 1.f, 0.f, 0.f), glm::vec3(10.f));
-    models[13]->Draw(GL_TRIANGLES, 1, 1);
+    models[14]->Draw(GL_TRIANGLES, 1, 1);
     SetUnis(cam, 2, glm::vec3(160.f, -100.f + 100.f * Mesh::ReadHeightMap(Mesh::heightMap, 160.f / 500.f, 30.f / 500.f), 30.f), glm::vec4(0.f, 1.f, 0.f, 0.f), glm::vec3(10.f));
-    models[13]->Draw(GL_TRIANGLES, 1, 1);
+    models[14]->Draw(GL_TRIANGLES, 1, 1);
     SetUnis(cam, 2, glm::vec3(180.f, -100.f + 100.f * Mesh::ReadHeightMap(Mesh::heightMap, 180.f / 500.f, 40.f / 500.f), 40.f), glm::vec4(0.f, 1.f, 0.f, 0.f), glm::vec3(10.f));
-    models[13]->Draw(GL_TRIANGLES, 1, 1);
+    models[14]->Draw(GL_TRIANGLES, 1, 1);
     ShaderProg::SetUni1i("bump", 0);
 
-    const uint amt = 999;
-    SetUnis(cam, 2);
-    ShaderProg::SetUni1i("useMat", 1);
-    meshes[1]->textures[1].SetActiveOnMesh(1);
-    meshes[1]->Draw(GL_TRIANGLES, amt);
-    //spriteAni->textures[0].SetActiveOnMesh(1);
-    //spriteAni->DrawSpriteAni(GL_TRIANGLES, amt);
-    ShaderProg::SetUni1i("useMat", 0);
+    //const uint amt = 999;
+    //SetUnis(cam, 2);
+    //ShaderProg::SetUni1i("useMat", 1);
+    //meshes[1]->textures[1].SetActiveOnMesh(1);
+    //meshes[1]->Draw(GL_TRIANGLES, amt);
+    ////spriteAni->textures[0].SetActiveOnMesh(1);
+    ////spriteAni->DrawSpriteAni(GL_TRIANGLES, amt);
+    //ShaderProg::SetUni1i("useMat", 0);
 
     RenderTreesAndRocks(cam);
     RenderSky(cam, 1); //Draw opaque objs first so depth buffer is filled with depth values of opaque objs and hence call frag shader to render only frags which pass the early depth test (saves bandwidth as frag shader does not run for frags that fail early depth test)
@@ -447,36 +452,42 @@ void Scene::RenderToCreatedFB(Cam const& cam, const Tex* const& enCubemap, const
     ShaderProg::StopUsingAllTexs();
 }
 
-void Scene::RenderToDefaultFB(const Tex& texColourBuffer, const int& typePPE, const glm::vec3& translate, const glm::vec3& scale) const{
+void Scene::RenderToDefaultFB(const Tex& texColourBuffer, const int& typePPE, const bool& lineariseDepth, const glm::vec3& translate, const glm::vec3& scale) const{
     screenQuadShaderProg->Use();
     glm::mat4 model = glm::scale(glm::translate(glm::mat4(1.f), translate), scale);
     ShaderProg::SetUniMtx4fv("model", glm::value_ptr(model), 0);
     ShaderProg::SetUni1i("screenQuad", 1);
     ShaderProg::SetUni1i("typePPE", typePPE);
     ShaderProg::UseTex(GL_TEXTURE_2D, texColourBuffer, "screenTex");
+    if(lineariseDepth){
+        ShaderProg::SetUni1i("lineariseDepth", 1);
+        ShaderProg::SetUni1f("near", 20.f);
+        ShaderProg::SetUni1f("far", 50.f);
+    }
     meshes[1]->Draw(GL_TRIANGLES, 1);
     ShaderProg::StopUsingTex(GL_TEXTURE_2D, texColourBuffer);
     ShaderProg::SetUni1i("screenQuad", 0);
+    ShaderProg::SetUni1i("lineariseDepth", 0);
 }
 
-void Scene::SetUnis(const Cam& cam, short type, const glm::vec3& translate, const glm::vec4& rotate, const glm::vec3& scale) const{
+void Scene::SetUnis(const Cam& cam, const short& type, const glm::vec3& translate, const glm::vec4& rotate, const glm::vec3& scale) const{
     glm::mat4 model = glm::translate(glm::mat4(1.f), translate);
     model = glm::rotate(model, glm::radians(rotate.w), glm::vec3(rotate));
     model = glm::scale(model, scale);
-    glm::mat4 view = (type & 1 ? glm::mat4(glm::mat3(cam.LookAt())) : cam.LookAt()); //Remove translation of skybox in the scene by taking upper-left 3x3 matrix of the 4x4 transformation matrix
-    glm::mat4 projection;
-    if(cam.GetProjectionType() == 0){
-        projection = glm::ortho(-10.f, 10.f, -10.f, 10.f, 1.f, 7.5f); //No perspective deform of vertices of objs in scene as directional light rays are parallel
-    } else if(cam.GetProjectionType() == 1){
-        projection = glm::perspective(glm::radians(angularFOV), 1024.f / 768.f, glm::length(cam.GetPos()) / 50.f, glm::length(cam.GetPos()) * 20.f); //shadows disappear at high lvls?? //shape distortion??
+    glm::mat4 view = (type & 1 ? glm::mat4(glm::mat3(cam.LookAt())) : cam.LookAt()); //Remove translation by taking upper-left 3x3 matrix of the 4x4 transformation matrix
+    glm::mat4 projection; //Determines range of visibility through affecting which frags get clipped
+    if(cam.GetProjectionIndex() == 0){
+        projection = glm::ortho(-280.f, 280.f, -280.f, 280.f, .1f, 300.f); //No perspective deform of vertices of objs in scene as directional light rays are parallel
+    } else if(cam.GetProjectionIndex() == 1){ //combine with 2??
+        projection = glm::perspective(glm::radians(angularFOV), 1024.f / 1024.f, 20.f, 50.f);
     } else{
         //projection = glm::ortho(0.0f, 800.0f, 0.0f, 600.0f, 0.1f, 100.0f); //Ortho projection matrix produces clip coords that are NDC while perspective projection matrix produces clip coords with a range of -w to w
         projection = glm::perspective(glm::radians(angularFOV), cam.GetAspectRatio(), .1f, 9999.f); //++ long dist from near plane to...??
     }
     glm::mat4 MVP = projection * view * model;
-    ShaderProg::SetUniMtx4fv("model", glm::value_ptr(model), 0); //Local coords in local/obj space => world coords in world space //SRT
-    ShaderProg::SetUniMtx4fv("view", glm::value_ptr(view), 0); //World coords in world space => view coords in view/cam/eye space
-    ShaderProg::SetUniMtx4fv("projection", glm::value_ptr(projection), 0); //View coords in view/cam/eye space => clip coords in clip space //Clipped vertices (not in clipping range/vol) are discarded when clipping occurs before frag shaders run
+    ShaderProg::SetUniMtx4fv("model", &model[0][0], 0); //Local coords in local/obj space => world coords in world space //SRT
+    ShaderProg::SetUniMtx4fv("view", &view[0][0], 0); //World coords in world space => view coords in view/cam/eye space
+    ShaderProg::SetUniMtx4fv("projection", &projection[0][0], 0); //View coords in view/cam/eye space => clip coords in clip space //Clipped vertices (not in clipping range/vol) are discarded when clipping occurs before frag shaders run
     ShaderProg::SetUniMtx4fv("MVP", glm::value_ptr(MVP), 0);
     ShaderProg::SetUni3f("camPos", cam.GetPos(), 0);
 

@@ -52,7 +52,7 @@ void Tex::Del() const noexcept{
 }
 
 Tex::Tex(const int& texTarget, const int& depthStencil, const int& width, const int& height, const int& minTexFilter, const int& magTexFilter, const int& texWrapper): activeOnMesh(0){
-    Create(texTarget, depthStencil, width, height, minTexFilter, magTexFilter, texWrapper, "colour buffer");
+    Create(texTarget, depthStencil, width, height, minTexFilter, magTexFilter, texWrapper, "render buffer");
 }
 
 void Tex::Create(const int& texTarget, const int& depthStencil, const int& width, const int& height, const int& minTexFilter, const int& magTexFilter, const int& texWrapper, const str& texType, const std::vector<cstr>* const& fPaths, const bool& flipTex){ //Colour buffer (stores all the frag colours: the visual output)
@@ -98,6 +98,10 @@ void Tex::Create(const int& texTarget, const int& depthStencil, const int& width
         glTexParameteri(texTarget, GL_TEXTURE_WRAP_T, texWrapper);
         if(texTarget == GL_TEXTURE_CUBE_MAP){ //??
             glTexParameteri(texTarget, GL_TEXTURE_WRAP_R, texWrapper);
+        }
+        if(texWrapper == GL_CLAMP_TO_BORDER){
+            float borderColor[] = {1.f, 1.f, 1.f, 1.f}; //Use red instead??
+            glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor); //So texture(shadowMap, projectedCoords.xy).r returns 1.f if sample outside depth/... map's [0.f, 1.f] coord range
         }
         //float borderColor[] = {1.0f, 0.0f, 0.0f, 1.0f};
         //glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);

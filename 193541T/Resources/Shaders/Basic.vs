@@ -31,12 +31,20 @@ uniform bool drawNormals;
 uniform bool wave;
 uniform float time;
 
+out vec4 FragPosFromLightD;
+out vec4 FragPosFromLightS;
+//uniform bool depthOnly;??
+uniform mat4 dLightSpaceVP;
+uniform mat4 sLightSpaceVP;
+
 void main(){
     FragPosLocalSpace = aPos;
     vsOut.Colour = aColor;
     vsOut.TexCoords = aTexCoords;
     vsOut.Normal = mat3(transpose(inverse(model))) * aNormal; //Multiplication with normal matrix
     vsOut.FragPosWorldSpace = vec3(model * vec4(aPos, 1.f));
+    FragPosFromLightD = dLightSpaceVP * vec4(vsOut.FragPosWorldSpace, 1.f);
+    FragPosFromLightS = sLightSpaceVP * vec4(vsOut.FragPosWorldSpace, 1.f);
 
     if(wave){
 		vec4 worldSpacePos = model * vec4(aPos, 1.f);
@@ -75,7 +83,8 @@ void main(){
         vsOut.FragPosWorldSpace = vec3(instanceMatrix * vec4(aPos, 1.f));
         mat4 modelView = view * instanceMatrix;
 
-        ///Remove rotation
+        ///Remove rotation??
+        modelView[1][1] = 4; //4 is scale of instance
         modelView[0][0] = modelView[1][1];
         modelView[2][2] = modelView[1][1];
         modelView[0][1] = 0;

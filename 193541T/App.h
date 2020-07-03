@@ -16,7 +16,7 @@ class App final{
 	Framebuffer* sDepthMapFBO;
 	Framebuffer* enFBO;
 	Framebuffer* intermediateFBO;
-	void RenderSceneToCreatedFB(const Cam&, const Framebuffer* const&, const Framebuffer* const&, const uint* const&, const short& = 999) const;
+	void RenderSceneToCreatedFB(const Cam&, const Framebuffer* const&, const Framebuffer* const&, const Tex* const&, const short& = 999) const;
 	void RenderSceneToDefaultFB(const Framebuffer* const&, const Framebuffer* const&, const int&, const glm::vec3&& = glm::vec3(0.f), const glm::vec3&& = glm::vec3(1.f)) const;
 public:
 	App();

@@ -6,15 +6,15 @@ extern float leftRightMB;
 extern float pitch;
 extern float yaw;
 
-Cam::Cam(const glm::vec3& newPos, const glm::vec3& newTarget, const glm::vec3& newUp, const short&& newProjectionType, const float&& newAspectRatio):
+Cam::Cam(const glm::vec3& newPos, const glm::vec3& newTarget, const glm::vec3& newUp, const short&& newProjectionIndex, const float&& newAspectRatio):
 	pos(newPos), target(newTarget), up(newUp),
 	defaultPos(newPos), defaultTarget(newTarget), defaultUp(newUp),
-	projectionType(newProjectionType),
+	projectionIndex(newProjectionIndex),
 	aspectRatio(newAspectRatio){}
 
 glm::mat4 Cam::LookAt() const{ //Translate meshes in the scene
 	glm::vec3 vecArr[]{CalcRight(), CalcUp(), -CalcFront()};
-	glm::mat4 translation = glm::mat4(1.0f), rotation = glm::mat4(1.0f);
+	glm::mat4 translation = glm::mat4(1.f), rotation = glm::mat4(1.f);
 	for(short i = 0; i < 3; ++i){ //Access elements as mat[col][row] due to column-major order
 	    translation[3][i] = -pos[i];
 	    for(short j = 0; j < 3; ++j){
@@ -63,7 +63,7 @@ void Cam::Update(const int& up, const int& down, const int& left, const int& rig
 
 void Cam::Reset(){
 	aspectRatio = 4.f / 3.f;
-	projectionType = 2;
+	projectionIndex = 2;
 	pos = defaultPos;
 	target = defaultTarget;
 	up = defaultUp;
@@ -73,8 +73,8 @@ const float& Cam::GetAspectRatio() const{
 	return aspectRatio;
 }
 
-const short& Cam::GetProjectionType() const{
-	return projectionType;
+const short& Cam::GetProjectionIndex() const{
+	return projectionIndex;
 }
 
 const glm::vec3& Cam::GetPos() const{

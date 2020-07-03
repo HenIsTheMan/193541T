@@ -25,13 +25,13 @@ bool App::Key(int key){
     return bool(glfwGetKey(win, key));
 }
 
-void App::RenderSceneToCreatedFB(const Cam& cam, const Framebuffer* const& FBO, const Framebuffer* const& enFBO, const uint* const& depthTexs, const short& index) const{ //Create framebuffer (combination of render buffers stored in GPU mem) to get an extra target to render to
+void App::RenderSceneToCreatedFB(const Cam& cam, const Framebuffer* const& FBO, const Framebuffer* const& enFBO, const Tex* const& depthTexs, const short& index) const{ //Create framebuffer (combination of render buffers stored in GPU mem) to get an extra target to render to
     glBindFramebuffer(GL_FRAMEBUFFER, FBO->GetRefID()); {
         if(index != 999){
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + index, FBO->GetTex().GetRefID(), 0);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         } else{
-            glClear(cam.GetProjectionType() > 1 ? GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT : GL_DEPTH_BUFFER_BIT); //State-using func //Clear info from prev frame stored in each render buffer with the appropriate bits set
+            glClear(cam.GetProjectionIndex() > 1 ? GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT : GL_DEPTH_BUFFER_BIT); //State-using func //Clear info from prev frame stored in each render buffer with the appropriate bits set
         }
         scene->RenderToCreatedFB(cam, enFBO ? &(enFBO->GetTex()) : 0, depthTexs);
     } glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -42,15 +42,15 @@ void App::RenderSceneToDefaultFB(const Framebuffer* const& readFBO, const Frameb
         glBlitFramebuffer(0, 0, 800, 600, 0, 0, 800, 600, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, GL_NEAREST);
     } glBindFramebuffer(GL_FRAMEBUFFER, 0); //Stop off-screen rendering by making the default framebuffer active //Unbind the framebuffer so won't accidentally render to the wrong framebuffer
     glClear(GL_DEPTH_BUFFER_BIT);
-    scene->RenderToDefaultFB(writeFBO->GetTex(), typePPE, translate, scale); //Some post-processing filters like edge detection will produce jagged edges as screenTex is non-multisampled so do post-processing later or use anti-aliasing alg to correct
+    scene->RenderToDefaultFB(writeFBO->GetTex(), typePPE, false, translate, scale); //Some post-processing filters like edge detection will produce jagged edges as screenTex is non-multisampled so do post-processing later or use anti-aliasing alg to correct
 }
 
 void App::Init(){
     InitGL(win);
     frontFBO = new Framebuffer(GL_TEXTURE_2D_MULTISAMPLE, 3, 800, 600, GL_LINEAR, GL_LINEAR, GL_CLAMP_TO_EDGE);
     backFBO = new Framebuffer(GL_TEXTURE_2D_MULTISAMPLE, 3, 800, 600, GL_LINEAR, GL_LINEAR, GL_CLAMP_TO_EDGE);
-    dDepthMapFBO = new Framebuffer(GL_TEXTURE_2D, 2, 1024, 1024, GL_NEAREST, GL_NEAREST, GL_REPEAT);
-    sDepthMapFBO = new Framebuffer(GL_TEXTURE_2D, 2, 1024, 1024, GL_NEAREST, GL_NEAREST, GL_REPEAT);
+    dDepthMapFBO = new Framebuffer(GL_TEXTURE_2D, 2, 1024, 1024, GL_NEAREST, GL_NEAREST, GL_CLAMP_TO_BORDER); //GL_CLAMP_TO_BORDER to reduce oversampling of depth/... map (light-space projected frag outside light's visible frustum > 1.f so sample depth/... map outside its [0.f, 1.f] range and makes currDepth > 1.f which causes area outside... to be in shadow) by making closestDepth of light-space projected frag outside... always 1.f
+    sDepthMapFBO = new Framebuffer(GL_TEXTURE_2D, 2, 1024, 1024, GL_NEAREST, GL_NEAREST, GL_CLAMP_TO_BORDER); //All frags outside... will have no shadows //Based on the texture's wrapping method, we will get incorrect depth results not based on the real depth values from the light source??
     enFBO = new Framebuffer(GL_TEXTURE_CUBE_MAP, 1, 1700, 1700, GL_LINEAR, GL_LINEAR, GL_CLAMP_TO_EDGE);
     intermediateFBO = new Framebuffer(GL_TEXTURE_2D, 0, 800, 600, GL_LINEAR, GL_LINEAR, GL_CLAMP_TO_EDGE);
 }
@@ -86,16 +86,18 @@ void App::Update(const Cam& cam){
 }
 
 void App::Render(const Cam& cam) const{
-    ///1st...: render scenes from lights' POV to depth/shadow map (occluded frags [in shadow], sample closest depth value of each visible frag as seen from light's POV and store them in depth buffer)
-    glViewport(0, 0, 1024, 1024); { //Render scene in depth/... map resolution so depth/... map will be neither incomplete nor too small
-        //glCullFace(GL_FRONT); { //Solves peter panning (shadow mapping artefact, shadow bias applied leads to visible offset of obj shadows, adjust shadow bias to avoid) for solid objs but causes shadows of plane objs to disappear //Take depth of back faces so shadows will form inside objs??
-            RenderSceneToCreatedFB(Cam(glm::vec3(-2.f, 4.f, -1.f), glm::vec3(0.f), glm::vec3(0.f, 1.f, 0.f), 0), dDepthMapFBO, enFBO, 0);
-            //RenderSceneToCreatedFB(Cam(cam.GetPos(), cam.GetTarget(), 1), depthMapS, enTex, 0);
-        //} glCullFace(GL_BACK); //Another consideration is that objects that are close to the shadow receiver (like the distant cube) may still give incorrect results??
-    } glViewport(0, 0, 800, 600); //Render scene in win resolution
+    ///1st...: render scenes from lights' POV to depth/shadow map (occluded frags [in shadow], sample closest depth value from depth/... map and check it against depth value of curr frag being processed in frag shader)
+    glViewport(0, 0, 1024, 1024); //Render scene in depth/... map resolution so depth/... map will be neither incomplete nor too small
+    glCullFace(GL_FRONT); //Solves peter panning (shadow mapping artefact, shadow bias applied to actual obj depth leads to visible offset of obj shadows, adjust shadow bias to avoid) for solid objs but causes shadows of plane objs to disappear //Take depth of back faces so shadows will form inside objs??
+    //glDisable(GL_CULL_FACE);
+    RenderSceneToCreatedFB(Cam(glm::vec3(0.f, 5.f, 0.f), glm::vec3(0.f), glm::vec3(0.f, 0.f, 1.f), 0), dDepthMapFBO, enFBO, 0);
+    RenderSceneToCreatedFB(Cam(cam.GetPos(), cam.GetTarget(), cam.GetUp(), 1), sDepthMapFBO, enFBO, 0);
+    //glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK); //Another consideration is that objects that are close to the shadow receiver (like the distant cube) may still give incorrect results??
+    glViewport(0, 0, 800, 600); //Render scene in win resolution
     
-    ////2nd set of render passes: render scenes with shadow mapping
-    uint depthTexs[]{dDepthMapFBO->GetTex().GetRefID(), sDepthMapFBO->GetTex().GetRefID()};
+    ////2nd set of render passes: render scenes with directional shadow mapping
+    Tex depthTexs[]{dDepthMapFBO->GetTex(), sDepthMapFBO->GetTex()};
 
     ///Dynamic environment mapping (use dynamically-generated cubemap textured with 6 diff angles of scene as seen from a cam to create reflective and refractive surfaces that include other instances, avoid and/or use pre-rendered cubemaps as expensive)
     Cam enCam(glm::vec3(0.f, .2f, 0.f), glm::vec3(0.f), glm::vec3(0.f), 2, 1.f);
@@ -117,8 +119,12 @@ void App::Render(const Cam& cam) const{
     angularFOV = initialAngularFOV;
 
     RenderSceneToCreatedFB(cam, frontFBO , enFBO, depthTexs);
-    RenderSceneToCreatedFB(Cam(cam.GetPos(), cam.GetPos() + cam.GetPos() - cam.GetTarget(), cam.GetUp()), backFBO, enFBO, depthTexs);
+    //RenderSceneToCreatedFB(Cam(cam.GetPos(), cam.GetPos() + cam.GetPos() - cam.GetTarget(), cam.GetUp()), backFBO, enFBO, depthTexs);
     glClear(GL_COLOR_BUFFER_BIT);
+
+    //glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    //scene->RenderToDefaultFB(sDepthMapFBO->GetTex(), typePPE, true);
     RenderSceneToDefaultFB(frontFBO, intermediateFBO, typePPE);
     //RenderSceneToDefaultFB(backFBO, intermediateFBO, typePPE, glm::vec3(-.5f, .5f, 0.f), glm::vec3(.5f));
 }

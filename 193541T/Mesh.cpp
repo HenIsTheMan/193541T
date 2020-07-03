@@ -26,6 +26,7 @@ Mesh::Mesh(const Mesh& other) noexcept{
 
 Mesh::~Mesh() noexcept{
     delete indices;
+    delete[] modelMatrices;
     glDeleteBuffers(1, &VAO);
     glDeleteBuffers(1, &VBO);
     glDeleteBuffers(1, &EBO);
@@ -72,6 +73,7 @@ void Mesh::Init(const uint& instanceAmt){
         }
     }
 
+    ///Better way??
     modelMatrices = new glm::mat4[instanceAmt];
     for(uint i = 0; i < instanceAmt; ++i){
         const float xPos = float(rand() % (501 - 4)) - 248.f;
@@ -116,7 +118,6 @@ void Mesh::Init(const uint& instanceAmt){
             glVertexAttribDivisor(i, 1); //Params: vertex attrib location, attrib divisor (0 means update vertex attrib to the next element per vertex and non-0 means... every non-0 amt of instances) //Config vertex attrib as an instanced arr (allows for passing more data [limited by mem] to the vertex shader for instanced drawing/...)
         }
     } glBindVertexArray(0); //Break the existing vertex arr obj binding
-    delete[] modelMatrices;
 }
 
 Mesh* const Mesh::CreatePts(){
@@ -246,6 +247,9 @@ void Mesh::Draw(const int& primitive, const uint& instanceAmt){
     }
     for(uint i = 0; i < textures.size(); ++i){
         if(textures[i].GetActiveOnMesh()){
+            if(textures[i].GetType() == "s"){
+                ShaderProg::SetUni1i("useSpecular", 1, 0);
+            }
             ShaderProg::UseTex(GL_TEXTURE_2D, textures[i], ("material." + textures[i].GetType() + "Map").c_str());
         }
     }
@@ -265,6 +269,9 @@ void Mesh::Draw(const int& primitive, const uint& instanceAmt){
     }
     for(uint i = 0; i < textures.size(); ++i){
         if(textures[i].GetActiveOnMesh()){
+            if(textures[i].GetType() == "s"){
+                ShaderProg::SetUni1i("useSpecular", 0, 0);
+            }
             ShaderProg::StopUsingTex(GL_TEXTURE_2D, textures[i]);
             textures[i].SetActiveOnMesh(0);
         }

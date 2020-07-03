@@ -7,7 +7,7 @@ class Cam final{
 	float aspectRatio;
 	glm::vec3 pos, target, up;
 	glm::vec3 defaultPos, defaultTarget, defaultUp;
-	short projectionType;
+	short projectionIndex;
 public:
 	Cam(const glm::vec3&, const glm::vec3&, const glm::vec3&, const short&& = 2, const float&& = 800.f / 600.f);
 	glm::vec3 CalcFront(bool = 1) const, CalcRight() const, CalcUp() const;
@@ -17,7 +17,7 @@ public:
 
 	///Getters
 	const float& GetAspectRatio() const;
-	const short& GetProjectionType() const;
+	const short& GetProjectionIndex() const;
 	const glm::vec3& GetPos() const;
 	const glm::vec3& GetTarget() const;
 	const glm::vec3& GetUp() const;
