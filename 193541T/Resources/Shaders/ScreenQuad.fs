@@ -6,11 +6,11 @@ in myInterface{
     vec2 TexCoords;
     vec3 Normal;
     vec3 FragPos;
-    vec3 TexDir;
 } fsIn;
 
 uniform sampler2D screenTex;
 const float offset = 1.f / 300.f;
+const float gamma = 2.2f; //sRGB colour space roughly corresponds to a monitor gamma of 2.2
 
 void main(){
     FragColor = texture(screenTex, fsIn.TexCoords);
@@ -66,4 +66,8 @@ void main(){
         col += sampleTex[i] * kernel[i]; //Multiply sampled tex values with weighted kernel values and add the products
     }
     FragColor = vec4(col, 1.f);*/
+
+    FragColor.rgb = pow(FragColor.rgb, vec3(1.f / gamma)); //Gamma correction (makes monitor display colours as linearly set, makes dark areas show more details, need as we config colour and lighting vars in sRGB space, multiply linear input values with reciprocal of gamma to brighten them 1st)
+    //We and artists generally set colour and lighting values higher (makes most linear-space calculations wrong) since the monitor darkens intermediate... values (as human eyes are more susceptible to changes in dark colours)
+    //Non-linear mapping of CRT monitors outputs more pleasing brightness to our eyes
 }

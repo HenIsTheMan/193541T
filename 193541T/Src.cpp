@@ -5,10 +5,10 @@
 
 int main(){
     srand(uint(glfwGetTime()));
-    App* app = new App;
-    Cam* cam = new Cam(glm::vec3(0.f, 0.f, 5.f), glm::vec3(0.f, 0.f, 0.f));
+    App* app = new App; //Implement Factory Method design pattern??
+    Cam* cam = new Cam(glm::vec3(0.f, 0.f, -5.f), glm::vec3(0.f));
     while(!glfwWindowShouldClose(App::win)){ //Main loop
-        app->Update();
+        app->Update(*cam);
         cam->Update(GLFW_KEY_Q, GLFW_KEY_E, GLFW_KEY_A, GLFW_KEY_D, GLFW_KEY_W, GLFW_KEY_S);
         app->Render(*cam);
         glfwSwapBuffers(App::win); //Swap the large 2D colour buffer containing colour values for each pixel in GLFW's window

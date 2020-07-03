@@ -7,13 +7,13 @@ in myInterface{
     vec2 TexCoords;
     vec3 Normal;
     vec3 FragPos;
-    vec3 TexDir;
 } gsIn[];
 
-const float len = .7f;
+uniform float len;
+
 void GenLine(int index){
-    for(float i = 0.f; i < 2.f; ++i){
-        gl_Position = gl_in[index].gl_Position + i * len * vec4(gsIn[index].Normal, 0.f); //Normalise instead??
+    for(float i = 0.f; i <= len; i += len){
+        gl_Position = gl_in[index].gl_Position + i * vec4(normalize(gsIn[index].Normal), 0.f);
         EmitVertex();
     }
     EndPrimitive();

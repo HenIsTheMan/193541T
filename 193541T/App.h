@@ -1,31 +1,26 @@
 #pragma once
-#include "Src.h"
 #include "Scene.h"
+#include "Buffer.h"
 
 class App final{
-	friend class Cam;
-	friend void FramebufferSizeCallback(GLFWwindow*, int, int);
-	friend void ScrollCallback(GLFWwindow*, double, double);
-	friend void CursorPosCallback(GLFWwindow*, double, double);
 	float lastFrame;
 	float cullBT;
 	float polyModeBT;
+	float camResetBT;
 	Scene* scene;
-	static bool firstCall;
-	static float pitch, yaw; //Euler angles
-	static float lastX, lastY;
-	static float sensitivity;
-	static bool Key(int);
-	uint frontFBO;
-	uint backFBO;
-	uint enFBO, enTex;
-	uint intermediateFBO, intermediateTex;
-	void CreateFramebuffer(uint&, uint&);
-	void CreateMultisampleFramebuffer(uint&);
+	Framebuffer* frontFBO;
+	Framebuffer* backFBO;
+	Framebuffer* dDepthMapFBO;
+	Framebuffer* sDepthMapFBO;
+	Framebuffer* enFBO;
+	Framebuffer* intermediateFBO;
+	void RenderSceneToCreatedFB(const Cam&, const Framebuffer* const&, const Framebuffer* const&, const uint* const&, const short& = 999) const;
+	void RenderSceneToDefaultFB(const Framebuffer* const&, const Framebuffer* const&, const Framebuffer* const&, const glm::vec3&& = glm::vec3(0.f), const glm::vec3&& = glm::vec3(1.f)) const;
 public:
 	App();
 	~App();
-	static float dt;
 	static GLFWwindow* win;
-	void Init(), Update(), Render(const Cam&);
+	static bool Key(int);
+	void Init(), Update(const Cam&);
+	void Render(const Cam&) const;
 };

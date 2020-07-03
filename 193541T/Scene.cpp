@@ -1,22 +1,34 @@
 #include "Scene.h"
+#include "LightChief.h"
 
-extern float FOV;
+extern float angularFOV;
 
 Scene::Scene():
-	meshes{new Mesh(LoadQuadVertices(), {0, 1, 2, 0, 3, 1}), new Mesh(LoadCubeVertices(), {0}), new Mesh(LoadPtVertices(), {0}), new Mesh(LoadQuadVertices2(), {0, 1, 2, 0, 3, 1})},
+	meshes{new Mesh(LoadQuadVertices(1.f), {0, 1, 2, 0, 3, 1}), new Mesh(LoadCubeVertices(), {0}), new Mesh(LoadPtVertices(), {0}), new Mesh(LoadQuadVertices(.05f), {0, 1, 2, 0, 3, 1}), new Mesh(LoadQuadVertices(1.f), {0, 1, 2, 0, 3, 1}),
+    new Mesh(LoadQuadVertices(1.f), {0, 1, 2, 0, 3, 1})},
     models{new Model("Resources/Models/Aloe_plant_SF.obj"), new Model("Resources/Models/nanosuit.obj"), new Model("Resources/Models/MyPlanet.obj"), new Model("Resources/Models/rock.obj")},
-    basicSC(new ShaderChief("Resources/Shaders/Basic.vs", "Resources/Shaders/Basic.fs")),
-    explosionSC(new ShaderChief("Resources/Shaders/Basic.vs", "Resources/Shaders/Basic.fs", "Resources/Shaders/Explosion.gs")),
-    outlineSC(new ShaderChief("Resources/Shaders/Basic.vs", "Resources/Shaders/Outline.fs")),
-    normalsSC(new ShaderChief("Resources/Shaders/Basic.vs", "Resources/Shaders/Outline.fs", "Resources/Shaders/Normals.gs")),
-    quadSC(new ShaderChief("Resources/Shaders/Basic.vs", "Resources/Shaders/Quad.fs")),
-	screenQuadSC(new ShaderChief("Resources/Shaders/Basic.vs", "Resources/Shaders/ScreenQuad.fs")),
+    basicShaderProg(new ShaderProg("Resources/Shaders/Basic.vs", "Resources/Shaders/Basic.fs")),
+    explosionShaderProg(new ShaderProg("Resources/Shaders/Basic.vs", "Resources/Shaders/Basic.fs", "Resources/Shaders/Explosion.gs")),
+    outlineShaderProg(new ShaderProg("Resources/Shaders/Basic.vs", "Resources/Shaders/Outline.fs")),
+    normalsShaderProg(new ShaderProg("Resources/Shaders/Basic.vs", "Resources/Shaders/Outline.fs", "Resources/Shaders/Normals.gs")),
+    quadShaderProg(new ShaderProg("Resources/Shaders/Basic.vs", "Resources/Shaders/Quad.fs")),
+    screenQuadShaderProg(new ShaderProg("Resources/Shaders/Basic.vs", "Resources/Shaders/ScreenQuad.fs")),
+    simpleDepthShaderProg(new ShaderProg("Resources/Shaders/SimpleDepth.vs", "Resources/Shaders/SimpleDepth.fs")),
     cubemapRefID(CreateCubemap(texFaces))
 {
     meshes[0]->LoadTexture("Resources/Textures/blending_transparent_window.png", "d"); //Issues when too close to each other??
-    meshes[1]->LoadTexture("Resources/Textures/container2.png", "d");
-    //meshes[1]->LoadTexture("Resources/Textures/container2_specular.png", "s"); //??
-    //meshes[1]->LoadTexture("Resources/Textures/matrix.jpg", "e"); //supported??
+    meshes[1]->LoadTexture("Resources/Textures/container2.png", "d"); //UseTex(...) for repeated texs of meshes and models??
+    //meshes[1]->LoadTexture("Resources/Textures/container2_specular.png", "s");
+    //meshes[1]->LoadTexture("Resources/Textures/matrix.jpg", "e");
+    meshes[4]->LoadTexture("Resources/Textures/wood.png", "d");
+    meshes[5]->LoadTexture("Resources/Textures/brickwall.jpg", "d");
+    meshes[5]->LoadTexture("Resources/Textures/brickwall_normal.jpg", "n");
+
+    //for(float i = 0.f; i < 5.f; ++i){ //Point light can cover a dist of 50 (from given table)
+    //    LightChief::CreateLightP(glm::vec3(5.f * i), 1.f, .09f, .032f);
+    //}
+    //LightChief::CreateLightD(glm::vec3(0.f, -1.f, 0.f));
+    LightChief::CreateLightS(glm::vec3(0.f), glm::vec3(0.f), glm::cos(glm::radians(12.5f)), glm::cos(glm::radians(17.5f)));
 }
 
 Scene::~Scene(){
@@ -26,20 +38,47 @@ Scene::~Scene(){
     for(short i = 0; i < sizeof(models) / sizeof(models[0]); ++i){
         delete models[i];
     }
-    delete basicSC;
-    delete explosionSC;
-    delete outlineSC;
-    delete normalsSC;
-    delete quadSC;
-    delete screenQuadSC;
+    delete basicShaderProg;
+    delete explosionShaderProg;
+    delete outlineShaderProg;
+    delete normalsShaderProg;
+    delete quadShaderProg;
+    delete screenQuadShaderProg;
+    delete simpleDepthShaderProg;
 }
 
-const std::vector<Vertex> Scene::LoadQuadVertices() const{ //Actual winding order is calculated at the rasterization stage after the vertex shader has run //Vertices are then seen from the viewer's POV
+const std::vector<Vertex> Scene::LoadQuadVertices(const float&& NDC) const{ //Actual winding order is calculated at the rasterization stage after the vertex shader has run //Vertices are then seen from the viewer's POV
+    glm::vec3 pos0(-NDC, -NDC, 0.f);
+    glm::vec3 pos1(NDC, NDC, 0.f);
+    glm::vec3 pos2(-NDC, NDC, 0.f);
+    glm::vec3 pos3(NDC, -NDC, 0.f);
+    glm::vec2 uv0(0.f, 0.f);
+    glm::vec2 uv1(1.f, 1.f);
+    glm::vec2 uv2(0.f , 1.f);
+    glm::vec2 uv3(1.f, 0.f);
+
+    glm::vec3 edge1 = pos1 - pos0;
+    glm::vec3 edge2 = pos2 - pos0;
+    glm::vec2 deltaUV1 = uv1 - uv0;
+    glm::vec2 deltaUV2 = uv2 - uv0;
+    float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+
+    glm::vec3 tangent1, bitangent1;
+    tangent1.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+    tangent1.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+    tangent1.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+    tangent1 = glm::normalize(tangent1);
+
+    bitangent1.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
+    bitangent1.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
+    bitangent1.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
+    bitangent1 = glm::normalize(bitangent1);
+    
     std::vector<Vertex> vertices;
-    vertices.emplace_back(Vertex(glm::vec3(-1.0f, -1.0f, 0.0f), glm::vec4(1.0f, 0.0f, 0.0f, 1.f), glm::vec2(0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
-    vertices.emplace_back(Vertex(glm::vec3(1.0f, 1.0f, 0.0f), glm::vec4(1.0f, 0.0f, 0.0f, 1.f), glm::vec2(1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
-    vertices.emplace_back(Vertex(glm::vec3(-1.0f, 1.0f, 0.0f), glm::vec4(1.0f, 0.0f, 0.0f, 1.f), glm::vec2(0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
-    vertices.emplace_back(Vertex(glm::vec3(1.0f, -1.0f, 0.0f), glm::vec4(1.0f, 0.0f, 0.0f, 1.f), glm::vec2(1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
+    vertices.emplace_back(Vertex(glm::vec3(-NDC, -NDC, 0.f), glm::vec4(0.f, 0.f, 1.f, 1.f), glm::vec2(0.f, 0.f), glm::vec3(0.0f, 0.0f, 1.f), tangent1, bitangent1));
+    vertices.emplace_back(Vertex(glm::vec3(NDC, NDC, 0.f), glm::vec4(0.f, 1.f, 1.f, 1.f), glm::vec2(1.f, 1.f), glm::vec3(0.0f, 0.0f, 1.f), tangent1, bitangent1));
+    vertices.emplace_back(Vertex(glm::vec3(-NDC, NDC, 0.f), glm::vec4(1.f, 0.f, 0.f, 1.f), glm::vec2(0.f, 1.f), glm::vec3(0.0f, 0.0f, 1.f), tangent1, bitangent1));
+    vertices.emplace_back(Vertex(glm::vec3(NDC, -NDC, 0.f), glm::vec4(0.f, 1.f, 0.f, 1.f), glm::vec2(1.f, 0.f), glm::vec3(0.0f, 0.0f, 1.f), tangent1, bitangent1));
     return vertices;
 }
 
@@ -102,15 +141,6 @@ const std::vector<Vertex> Scene::LoadPtVertices() const{ //Draw 5 pts with colou
     return vertices;
 }
 
-const std::vector<Vertex> Scene::LoadQuadVertices2() const{ //2D NDC??
-    std::vector<Vertex> vertices;
-    vertices.emplace_back(Vertex(glm::vec3(-0.05f, -0.05f, 0.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.f), glm::vec2(0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
-    vertices.emplace_back(Vertex(glm::vec3(0.05f, 0.05f, 0.0f), glm::vec4(0.0f, 1.0f, 1.0f, 1.f), glm::vec2(1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
-    vertices.emplace_back(Vertex(glm::vec3(-0.05f, 0.05f, 0.0f), glm::vec4(1.0f, 0.0f, 0.0f, 1.f), glm::vec2(0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
-    vertices.emplace_back(Vertex(glm::vec3(0.05f, -0.05f, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.f), glm::vec2(1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
-    return vertices;
-}
-
 const uint Scene::CreateCubemap(const std::vector<cstr>& faces) const{
     uint cubeMap;
     glGenTextures(1, &cubeMap);
@@ -138,53 +168,66 @@ const uint Scene::CreateCubemap(const std::vector<cstr>& faces) const{
 }
 
 void Scene::DrawInstance(const Cam& cam, const bool& type, const glm::vec3& translate = glm::vec3(0.f), const glm::vec3& scale = glm::vec3(1.f)) const{
-    SetUnis(cam, 2 * (scale == glm::vec3(1.f)), translate, scale);
+    SetUnis(cam, 2 * (scale == glm::vec3(1.f)), translate, {0.f, 1.f, 0.f, 0.f}, scale);
     (type ? models[1]->Draw(1, scale == glm::vec3(1.f)) : meshes[1]->Draw(0, scale == glm::vec3(1.f)));
 }
 
+void Scene::Update(Cam const& cam){
+    if(LightChief::sLights.size()){
+        LightChief::sLights[0].pos = cam.GetPos();
+        LightChief::sLights[0].dir = cam.CalcFront();
+    }
+}
+
+void Scene::RenderNormals(const Cam& cam, const bool& type) const{ //Can use to add fur //Wrong normals due to incorrectly loading vertex data, improperly specifying vertex attributes or incorrectly managing them in the shaders
+    normalsShaderProg->Use();
+    ShaderProg::SetUni1f("len", .5f);
+    ShaderProg::SetUni3f("myRGB", 1.f, 1.f, 0.f);
+    ShaderProg::SetUni1i("drawNormals", 1);
+    SetUnis(cam, 0);
+    (type ? models[1]->Draw(1, 0) : meshes[1]->Draw(0, 0));
+    ShaderProg::SetUni1i("drawNormals", 0);
+}
+
 void Scene::RenderStuff(const Cam& cam) const{
-    basicSC->UseProg();
+    basicShaderProg->Use();
     const uint amt = 2000;
     SetUnis(cam, 2, glm::vec3(0.f, 10.f, 0.f));
     models[2]->Draw(1, 1);
-    ShaderChief::SetUni1i("useMat", 1);
+    ShaderProg::SetUni1i("useMat", 1);
     models[3]->DrawInstanced(1, 1, amt);
-    ShaderChief::SetUni1i("useMat", 0);
-
-    basicSC->UseProg();
-    ShaderChief::SetUni1i("useFlatColour", 1); {
-        ShaderChief::SetUni1i("useOffset", 1); {
-            SetUnis(cam, 0);
-            for(short i = 0; i < 100; ++i){
-                meshes[3]->DrawInstanced(1, 0, 100);
-            }
-        } ShaderChief::SetUni1i("useOffset", 0);
+    ShaderProg::SetUni1i("useMat", 0);
+    SetUnis(cam, 0);
+    ShaderProg::SetUni1i("useFlatColour", 1); {
+        ShaderProg::SetUni1i("useOffset", 1); {
+            meshes[3]->DrawInstanced(1, 0, 100);
+        } ShaderProg::SetUni1i("useOffset", 0);
         glPointSize(50.f);
         glLineWidth(2.f);
         meshes[2]->DrawPts(5);
-    } ShaderChief::SetUni1i("useFlatColour", 0);
+    } ShaderProg::SetUni1i("useFlatColour", 0);
 }
 
 void Scene::RenderShiny(const Cam& cam, const glm::vec3& translate = glm::vec3(0.f), const glm::vec3& scale = glm::vec3(1.f), bool mergeBorders = 1) const{
     //Default is glStencilFunc(GL_ALWAYS, 1, 0xFF)
     glStencilMask(0xFF); //Set bitmask that is ANDed with stencil value abt to be written to stencil buffer //Each bit is written to the stencil buffer unchanged (bitmask of all 1s [default])
 
-    basicSC->UseProg();
-    ShaderChief::SetUni1i("reflection", 1);
+    basicShaderProg->Use();
+    ShaderProg::SetUni1i("reflection", 0);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapRefID); {
-        ShaderChief::SetUni1i("cubemapSampler", 1);
+        ShaderProg::SetUni1i("cubemapSampler", 1);
         DrawInstance(cam, 0, translate);
     } glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-    ShaderChief::SetUni1i("reflection", 0);
+    ShaderProg::SetUni1i("reflection", 0);
 
     if(mergeBorders){
         glDepthMask(GL_FALSE);
     }
     if(scale != glm::vec3(1.f)){
         glStencilFunc(GL_NOTEQUAL, 1, 0xFF); //The frag passes... and is drawn if its ref value of 1 is not equal to stencil value in the stencil buffer //++params??
-        outlineSC->UseProg();
-        ShaderChief::SetUni3f("myRGB", 2.1f, .7f, 1.3f);
+        outlineShaderProg->Use();
+        ShaderProg::SetUni3f("myRGB", 2.1f, .7f, 1.3f);
         DrawInstance(cam, 0, translate, scale);
         glStencilFunc(GL_ALWAYS, 1, 0xFF);
     }
@@ -204,15 +247,15 @@ void Scene::RenderSkybox(const Cam& cam) const{
     glFrontFace(GL_CW);
     //glDepthMask(GL_FALSE);
 
-    basicSC->UseProg();
-    ShaderChief::SetUni1i("cubemap", 1);
+    basicShaderProg->Use();
+    ShaderProg::SetUni1i("cubemap", 1);
     SetUnis(cam, 1);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapRefID); {
-        ShaderChief::SetUni1i("cubemapSampler", 0);
+        ShaderProg::SetUni1i("cubemapSampler", 0);
         meshes[1]->Draw(0, 0);
     } glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-    ShaderChief::SetUni1i("cubemap", 0);
+    ShaderProg::SetUni1i("cubemap", 0);
 
     //glDepthMask(GL_TRUE);
     glFrontFace(GL_CCW);
@@ -227,10 +270,10 @@ void Scene::RenderWindows(const Cam& cam) const{
         sorted[dist] = quadPos[i];
     }
 
-    quadSC->UseProg();
+    quadShaderProg->Use();
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, meshes[0]->textures[0].refID); {
-        ShaderChief::SetUni1i("texSampler", 0);
+        ShaderProg::SetUni1i("texSampler", 0);
         for(std::map<float, glm::vec3>::reverse_iterator it = sorted.rbegin(); it != sorted.rend(); ++it){
             SetUnis(cam, 0, it->second);
             meshes[0]->Draw(1, 0);
@@ -238,88 +281,136 @@ void Scene::RenderWindows(const Cam& cam) const{
     } glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void Scene::RenderToCreatedFB(const Cam const& const cam, const uint* const& const enCubemap) const{
+void Scene::RenderToCreatedFB(Cam const& cam, const uint* const& enCubemap, const uint* const& depthTexs) const{ //Intermediate results passed between framebuffers to remain in linear space and only the last framebuffer applies gamma correction before being sent to the monitor??
     //glStencilMask(0x00); //Make outline overlap
 
-    RenderStuff(cam);
+    if(!depthTexs){
+        basicShaderProg->Use();
+        ShaderProg::SetUni1i("depthOnly", 1);
+        explosionShaderProg->Use();
+        ShaderProg::SetUni1i("depthOnly", 1);
+    } else{
+        Cam dCam = Cam(glm::vec3(-2.f, 4.f, -1.f), glm::vec3(0.f));
+        glm::mat4 dLightSpaceVP = glm::ortho(-10.f, 10.f, -10.f, 10.f, 1.f, 7.5f) * dCam.LookAt(); //Ensure projection frustum size is correct so no fragments of objs are clipped (fragments of objs not in the depth/... map will not produce shadows)
+        glm::mat4 sLightSpaceVP = glm::perspective(glm::radians(angularFOV), 1024.f / 1024.f, 1.f, 50.f) * cam.LookAt(); //Depth is non-linear with perspective projection
+        //glm::length(cam.GetPos()) / 50.f, glm::length(cam.GetPos()) * 20.f
+
+        basicShaderProg->Use();
+        ShaderProg::SetUni1i("depthOnly", 0);
+        ShaderProg::SetUni1i("showShadows", 0);
+        ShaderProg::SetUniMtx4fv("dLightSpaceVP", glm::value_ptr(dLightSpaceVP));
+        ShaderProg::SetUniMtx4fv("sLightSpaceVP", glm::value_ptr(sLightSpaceVP));
+        for(short i = 0; i < 2; ++i){
+            glActiveTexture(GL_TEXTURE30 + i);
+            glBindTexture(GL_TEXTURE_2D, depthTexs[i]);
+            ShaderProg::SetUni1i(~i & 1 ? "shadowMapD" : "shadowMapS", 30 + i);
+        }
+        explosionShaderProg->Use();
+        ShaderProg::SetUni1i("depthOnly", 0);
+        ShaderProg::SetUni1i("showShadows", 0);
+        ShaderProg::SetUniMtx4fv("dLightSpaceVP", glm::value_ptr(dLightSpaceVP));
+        ShaderProg::SetUniMtx4fv("sLightSpaceVP", glm::value_ptr(sLightSpaceVP));
+        for(short i = 0; i < 2; ++i){
+            glActiveTexture(GL_TEXTURE30 + i);
+            glBindTexture(GL_TEXTURE_2D, depthTexs[i]);
+            ShaderProg::SetUni1i(~i & 1 ? "shadowMapD" : "shadowMapS", 30 + i);
+        }
+    }
 
     //++ DrawQuads(...) and DrawCubes(...)
-
+    RenderStuff(cam);
     if(enCubemap){
-        explosionSC->UseProg();
-        ShaderChief::SetUni1f("magnitude", 2.f);
-        ShaderChief::SetUni1f("time", glfwGetTime());
-        ShaderChief::SetUni1i("reflection", 0);
-        glActiveTexture(GL_TEXTURE3); //Why 2 cannot?? //New auto way??
-        glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapRefID); {
-            ShaderChief::SetUni1i("cubemapSampler", 3);
-            DrawInstance(cam, 1);
-        } glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-        ShaderChief::SetUni1i("reflection", 0);
-
-        //Can use to add fur ///Wrong normals due to incorrectly loading vertex data, improperly specifying vertex attributes or incorrectly managing them in the shaders
-        normalsSC->UseProg();
-        ShaderChief::SetUni1i("drawNormals", 1);
-        ShaderChief::SetUni3f("myRGB", 1.f, 1.f, 0.f);
-        SetUnis(cam, 0);
-        models[1]->Draw(1, 0);
-        ShaderChief::SetUni1i("drawNormals", 0);
+        explosionShaderProg->Use();
+        ShaderProg::SetUni1f("magnitude", 1.3f);
+        ShaderProg::SetUni1f("time", (float)glfwGetTime());
+        ShaderProg::SetUni1i("reflection", 1);
+        ShaderProg::SetUni1i("emission", 1);
+        ShaderProg::SetUni1i("explosion", 1);
+        glActiveTexture(GL_TEXTURE3); //New auto way?? //Why 2 cannot for nanosuit??
+        ShaderProg::SetUni1i("cubemapSampler", 3); //New placement??
+        glBindTexture(GL_TEXTURE_CUBE_MAP, *enCubemap);
+        DrawInstance(cam, 0); //Pass func ptr into another func??
+        glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+        ShaderProg::SetUni1i("explosion", 0);
+        ShaderProg::SetUni1i("emission", 0);
+        ShaderProg::SetUni1i("reflection", 0);
     }
-
+    RenderNormals(cam, 0);
     for(short i = 0; i < 5; ++i){
-        RenderShiny(cam, quadPos[i] + glm::vec3(0.f, -5.f, 0.f), glm::vec3(1.25f), 0);
+        RenderShiny(cam, quadPos[i] + glm::vec3(0.f, -5.f, 0.f), glm::vec3(1.25f), 0); //Model outline??
     }
+
+    basicShaderProg->Use();
+    SetUnis(cam, 2, {0.f, -12.f, 0.f}, glm::vec4(1.f, 0.f, 0.f, -90.f), glm::vec3(25.f));
+    meshes[4]->Draw(1, 1);
+    ShaderProg::SetUni1i("bump", 1);
+    SetUnis(cam, 2, {0.f, 0.f, -20.f}, glm::vec4(1.f, 0.f, 0.f, -90.f), glm::vec3(5.f));
+    meshes[5]->Draw(1, 1);
+    ShaderProg::SetUni1i("bump", 0);
+
     RenderSkybox(cam);
     RenderWindows(cam);
 }
 
 void Scene::RenderToDefaultFB(const uint& texColourBuffer, const glm::vec3& translate, const glm::vec3& scale) const{
-    screenQuadSC->UseProg();
-    ShaderChief::SetUni1i("screenQuad", 1);
+    screenQuadShaderProg->Use();
+    ShaderProg::SetUni1i("screenQuad", 1);
     glm::mat4 model = glm::scale(glm::translate(glm::mat4(1.f), translate), scale);
-    ShaderChief::SetUniMtx4fv("model", glm::value_ptr(model), 0);
+    ShaderProg::SetUniMtx4fv("model", glm::value_ptr(model), 0);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texColourBuffer); {
-        ShaderChief::SetUni1i("screenTex", 0);
+        ShaderProg::SetUni1i("screenTex", 0);
         meshes[0]->Draw(1, 0);
     } glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void Scene::SetUnis(const Cam& cam, short type, const glm::vec3& translate, const glm::vec3& scale, const glm::vec4& rotate) const{
-    glm::mat4 model = glm::mat4(1.f);
-    model = glm::translate(model, translate);
-    model = glm::rotate(model, rotate.w, glm::vec3(rotate));
+void Scene::SetUnis(const Cam& cam, short type, const glm::vec3& translate, const glm::vec4& rotate, const glm::vec3& scale) const{
+    glm::mat4 model = glm::translate(glm::mat4(1.f), translate);
+    model = glm::rotate(model, glm::radians(rotate.w), glm::vec3(rotate));
     model = glm::scale(model, scale);
     glm::mat4 view = (type & 1 ? glm::mat4(glm::mat3(cam.LookAt())) : cam.LookAt()); //Remove translation of skybox in the scene by taking upper-left 3x3 matrix of the 4x4 transformation matrix
-    glm::mat4 projection = glm::perspective(glm::radians(FOV), 800.0f / 600.0f, 0.1f, 100.0f);
+    glm::mat4 projection;
+    if(cam.GetProjectionType() == 0){
+        projection = glm::ortho(-10.f, 10.f, -10.f, 10.f, 1.f, 7.5f); //No perspective deform of vertices of objs in scene as directional light rays are parallel
+    } else if(cam.GetProjectionType() == 1){
+        projection = glm::perspective(glm::radians(angularFOV), 1024.f / 768.f, glm::length(cam.GetPos()) / 50.f, glm::length(cam.GetPos()) * 20.f); //shadows disappear at high lvls?? //shape distortion??
+    } else{
+        //projection = glm::ortho(0.0f, 800.0f, 0.0f, 600.0f, 0.1f, 100.0f); //Ortho projection matrix produces clip coords that are NDC while perspective projection matrix produces clip coords with a range of -w to w
+        projection = glm::perspective(glm::radians(angularFOV), cam.GetAspectRatio(), .1f, 100.f); //aspect ratio?? //++ long dist from near plane to...??
+    }
     glm::mat4 MVP = projection * view * model;
-    ShaderChief::SetUniMtx4fv("model", glm::value_ptr(model), 0); //Local coords in local/obj space => world coords in world space //SRT
-    ShaderChief::SetUniMtx4fv("view", glm::value_ptr(view), 0); //World coords in world space => view coords in view/cam/eye space
-    ShaderChief::SetUniMtx4fv("projection", glm::value_ptr(projection), 0); //View coords in view/cam/eye space => clip coords in clip space //aspect ratio?? //++ long dist from near plane to...
-    ShaderChief::SetUniMtx4fv("MVP", glm::value_ptr(MVP), 0);
-    ShaderChief::SetUni3f("camPos", cam.GetPos().x, cam.GetPos().y, cam.GetPos().z, 0);
+    ShaderProg::SetUniMtx4fv("model", glm::value_ptr(model), 0); //Local coords in local/obj space => world coords in world space //SRT
+    ShaderProg::SetUniMtx4fv("view", glm::value_ptr(view), 0); //World coords in world space => view coords in view/cam/eye space
+    ShaderProg::SetUniMtx4fv("projection", glm::value_ptr(projection), 0); //View coords in view/cam/eye space => clip coords in clip space //Clipped vertices (not in clipping range/vol) are discarded when clipping occurs before frag shaders run
+    ShaderProg::SetUniMtx4fv("MVP", glm::value_ptr(MVP), 0);
+    ShaderProg::SetUni3f("camPos", cam.GetPos(), 0);
 
-    if(~type & 1 && type){
-        for(short i = 0; i < 4; ++i){ ///Make Abstract??? //Point light can cover a dist of 50 (from given table)
-            ShaderChief::SetUni3f(("pLights[" + std::to_string(i) + "].pos").c_str(), 100.f, 100.f, 100.f); //??
-            ShaderChief::SetUni1f(("pLights[" + std::to_string(i) + "].constant").c_str(), 1.f);
-            ShaderChief::SetUni1f(("pLights[" + std::to_string(i) + "].linear").c_str(), .09f);
-            ShaderChief::SetUni1f(("pLights[" + std::to_string(i) + "].quadratic").c_str(), .032f);
+    if(type == 2){
+        const size_t &&amtP = LightChief::pLights.size(), &&amtD = LightChief::dLights.size(), &&amtS = LightChief::sLights.size();
+        ShaderProg::SetUni1i("amtP", (int)amtP);
+        ShaderProg::SetUni1i("amtD", (int)amtD);
+        ShaderProg::SetUni1i("amtS", (int)amtS);
+        if(amtP){
+            for(short i = 0; i < amtP; ++i){
+                ShaderProg::SetUni3f(("pLights[" + std::to_string(i) + "].pos").c_str(), LightChief::pLights[i].pos);
+                ShaderProg::SetUni1f(("pLights[" + std::to_string(i) + "].constant").c_str(), LightChief::pLights[i].constant);
+                ShaderProg::SetUni1f(("pLights[" + std::to_string(i) + "].linear").c_str(), LightChief::pLights[i].linear);
+                ShaderProg::SetUni1f(("pLights[" + std::to_string(i) + "].quadratic").c_str(), LightChief::pLights[i].quadratic);
+            }
         }
-        ShaderChief::SetUni3f("dLight.dir", 0.f, 1.0f, 0.f); //??
-        ShaderChief::SetUni3f("sLight.pos", cam.GetPos().x, cam.GetPos().y, cam.GetPos().z);
-        ShaderChief::SetUni3f("sLight.dir", cam.CalcFront().x, cam.CalcFront().y, cam.CalcFront().z); //Inefficient??
-        ShaderChief::SetUni1f("sLight.cosInnerCutoff", glm::cos(glm::radians(12.5f))); //More efficient than passing in cut-off angle as can directly compare...
-        ShaderChief::SetUni1f("sLight.cosOuterCutoff", glm::cos(glm::radians(17.5f))); //...
-        ShaderChief::SetUni1f("material.shininess", 32.f); //More light scattering if lower
+        if(amtD){
+            for(short i = 0; i < amtD; ++i){
+                ShaderProg::SetUni3f(("dLights[" + std::to_string(i) + "].dir").c_str(), LightChief::dLights[i].dir);
+            }
+        }
+        if(amtS){
+            for(short i = 0; i < amtS; ++i){
+                ShaderProg::SetUni3f(("sLights[" + std::to_string(i) + "].pos").c_str(), LightChief::sLights[i].pos);
+                ShaderProg::SetUni3f(("sLights[" + std::to_string(i) + "].dir").c_str(), LightChief::sLights[i].dir);
+                ShaderProg::SetUni1f(("sLights[" + std::to_string(i) + "].cosInnerCutoff").c_str(), LightChief::sLights[i].cosInnerCutoff);
+                ShaderProg::SetUni1f(("sLights[" + std::to_string(i) + "].cosOuterCutoff").c_str(), LightChief::sLights[i].cosOuterCutoff);
+            }
+        }
+        ShaderProg::SetUni1f("material.shininess", 32.f); //More light scattering if lower //Test low?? //Make abstract??
     }
 }
-
-//glm::ortho(0.0f, 800.0f, 0.0f, 600.0f, 0.1f, 100.0f); //Ortho projection matrix produces clip coords that are NDC alr while perspective projection matrix produces clip coords with a range of -w to w
-//Clipped vertices (not in clipping range/vol) are discarded
-//Perspective division (dividing gl_Position's xyz coords by its w component) is done automatically after the vertex shader step
-
-//float angle = (float)i / (float)amt * 360.0f;
-//float displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset; //Multi??
-//SetUnis(cam, 2, glm::vec3(sin(angle) * radius + displacement, displacement * 0.4f, cos(angle) * radius + displacement),
-//glm::vec3((rand() % 21) / 100.0f + 0.05f), glm::vec4(0.4f, 0.6f, 0.8f, float(rand() % 360))); //transform x and z along the circle and randomly displace along circle with 'radius' in range [-offset, offset]??

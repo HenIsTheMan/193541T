@@ -9,7 +9,6 @@ in myInterface{ //Input interface block
     vec2 TexCoords;
     vec3 Normal;
     vec3 FragPos;
-    vec3 TexDir;
 } gsIn[]; //Interface block arr (arr as most render primitives formed in Primitive/Shape Assembly have > 1 vertex)
 
 out myInterface{
@@ -17,7 +16,6 @@ out myInterface{
     vec2 TexCoords;
     vec3 Normal;
     vec3 FragPos;
-    vec3 TexDir;
 } gsOut;
 
 void MakePt(vec4 pos){ //Pass-through geometry shader (takes a primitive as its input and passes it to the next shader unmodified)
@@ -51,7 +49,6 @@ void main(){
     gsOut.TexCoords = gsIn[0].TexCoords;
     gsOut.Normal = gsIn[0].Normal;
     gsOut.FragPos = gsIn[0].FragPos;
-    gsOut.TexDir = gsIn[0].TexDir;
 
     MakePt(gl_in[0].gl_Position);
     //MakeLine(gl_in[0].gl_Position);

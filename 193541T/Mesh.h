@@ -2,7 +2,7 @@
 #include "Src.h"
 #include "Utility.h"
 
-class Mesh{ //Single drawable entity
+class Mesh final{ //Single drawable entity
     glm::vec2 translations[100];
     uint VAO, VBO, EBO; //Store ref ID
     void Init(uint = 1);

@@ -6,7 +6,6 @@ in myInterface{
     vec2 TexCoords;
     vec3 Normal;
     vec3 FragPos;
-    vec3 TexDir; 
 } fsIn;
 
 uniform sampler2D texSampler;
@@ -19,15 +18,19 @@ float LineariseDepth(float depth){ //Reverse the process of projection for depth
 }
 
 void main(){
-    float depthLinearised = LineariseDepth(gl_FragCoord.z); //gl_FragCoord.xy is fragment's window-space/screen-space coords with (0, 0) being the bottom-left corner //gl_FragCoord.z is depth value of fragment (compared to the depth buffer's content)
+    const float gamma = 2.2f;
     FragColor = texture(texSampler, fsIn.TexCoords);
+    FragColor.rgb = pow(FragColor.rgb, vec3(gamma));
+
+    float depthLinearised = LineariseDepth(gl_FragCoord.z); //gl_FragCoord.xy is fragment's window-space/screen-space coords with (0, 0) being the bottom-left corner //gl_FragCoord.z is depth value of fragment (compared to the depth buffer's content)
+    if(FragColor.a > .1f && FragColor.a < 1.f){
+        FragColor.a += (depthLinearised / far) * 1.9f;
+        FragColor.a = min(FragColor.a, 1.f);
+    }
+
     /*if(FragColor.a < .1f){
         discard; //Discard fragments (not stored in the color buffer) over blending them for fully transparent objs so no depth issues
     }*/
-    if(FragColor.a > .1f && FragColor.a < 1.f){
-        FragColor.a += (depthLinearised / far) * 1.5f;
-        FragColor.a = min(FragColor.a, 1.f);
-    }
     //FragColor = vec4(vec3(1.f) - vec3(depthLinearised / far), 1.f); //For visualising the depth buffer //Divide by far to make range [0, 1] as linearised depth values range from near to far
     //FragColor = vec4(vec3(gl_FragCoord.z), 1.f);
 }

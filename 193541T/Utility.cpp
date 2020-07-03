@@ -1,10 +1,29 @@
 #include "Utility.h"
 
-Vertex::Vertex(glm::vec3 pos, glm::vec4 colour, glm::vec2 texCoords, glm::vec3 normal){
+Vertex::Vertex(const glm::vec3& newPos, const glm::vec4& newColour, const glm::vec2& newTexCoords, const glm::vec3& newNormal, const glm::vec3& newTangent, const glm::vec3& newBitangent):
+    pos(newPos),
+    colour(newColour),
+    texCoords(newTexCoords),
+    normal(newNormal),
+    tangent(newTangent),
+    bitangent(newBitangent){}
+
+Texture::Texture(const uint& newRefID, const str& newType): refID(newRefID), type(newType){}
+
+PointLight::PointLight(const glm::vec3& pos, const float& constant, const float& linear, const float& quadratic) noexcept{
     this->pos = pos;
-    this->colour = colour;
-    this->texCoords = texCoords;
-    this->normal = normal;
+    this->constant = constant;
+    this->linear = linear;
+    this->quadratic = quadratic;
 }
 
-Texture::Texture(uint newRefID, str newType): refID(newRefID), type(newType){}
+DirectionalLight::DirectionalLight(const glm::vec3& dir) noexcept{
+    this->dir = dir;
+}
+
+Spotlight::Spotlight(const glm::vec3& pos, const glm::vec3& dir, const float& cosInnerCutoff, const float& cosOuterCutoff) noexcept{
+    this->pos = pos;
+    this->dir = dir;
+    this->cosInnerCutoff = cosInnerCutoff;
+    this->cosOuterCutoff = cosOuterCutoff;
+}

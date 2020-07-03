@@ -7,7 +7,7 @@ void Model::Init(){
     LoadModel(modelPath);
 }
 
-void Model::LoadModel(cstr fPath){ //Load model into a DS of Assimp called a scene obj (root obj of Assimp's data interface)
+void Model::LoadModel(cstr fPath) const{ //Load model into a DS of Assimp called a scene obj (root obj of Assimp's data interface)
     Assimp::Importer import;
     const aiScene* scene = import.ReadFile(fPath, aiProcess_Triangulate | aiProcess_FlipUVs);
     if(!scene || !scene->mRootNode || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE){ //If !scene || !(root node of scene) || returned data is incomplete (given by 1 of its flags)
@@ -17,7 +17,7 @@ void Model::LoadModel(cstr fPath){ //Load model into a DS of Assimp called a sce
     ProcessNode(scene->mRootNode, scene);
 }
 
-void Model::ProcessNode(aiNode* node, const aiScene* scene){ //Process all of the scene obj's nodes recursively to translate the loaded data to an arr of Mesh objs //For parent-child relation between meshes
+void Model::ProcessNode(aiNode* node, const aiScene* scene) const{ //Process all of the scene obj's nodes recursively to translate the loaded data to an arr of Mesh objs //For parent-child relation between meshes
     for(uint i = 0; i < node->mNumMeshes; ++i){ //Process all the nodes' meshes (if any)
         aiMesh* mesh = scene->mMeshes[node->mMeshes[i]]; //Check a node's mesh indices and retrieve the corresponding mesh by indexing the scene's mMeshes array
         meshes.emplace_back(ProcessMesh(mesh, scene)); //Store mesh obj
@@ -27,7 +27,7 @@ void Model::ProcessNode(aiNode* node, const aiScene* scene){ //Process all of th
     }
 }
 
-Mesh Model::ProcessMesh(aiMesh* meshObj, const aiScene* scene){
+Mesh Model::ProcessMesh(aiMesh* meshObj, const aiScene* scene) const{
     std::vector<Vertex> vertices;
     std::vector<uint> indices;
 
@@ -56,7 +56,7 @@ Mesh Model::ProcessMesh(aiMesh* meshObj, const aiScene* scene){
     return mesh;
 }
 
-void Model::LoadMaterialTextures(const aiMaterial* const& mat, std::vector<std::pair<str, str>>& texMaps){ //Helper function to retrieve the textures from the material
+void Model::LoadMaterialTextures(const aiMaterial* const& mat, const std::vector<std::pair<str, str>>& texMaps) const{ //Helper function to retrieve the textures from the material
     aiTextureType types[]{aiTextureType_DIFFUSE, aiTextureType_SPECULAR, aiTextureType_EMISSIVE, aiTextureType_NORMALS, aiTextureType_AMBIENT};
     for(short i = 0; i < sizeof(types) / sizeof(types[0]); ++i){
         for(uint j = 0; j < mat->GetTextureCount(types[i]); ++j){ //For each texture in the material of the given texture type...
@@ -72,7 +72,7 @@ void Model::LoadMaterialTextures(const aiMaterial* const& mat, std::vector<std::
                 case 4: typeName = "r";
             }
             if(!texAlrLoaded){
-                texMaps.emplace_back(std::make_pair(newFileName, typeName));
+                const_cast<std::vector<std::pair<str, str>>&>(texMaps).emplace_back(std::make_pair(newFileName, typeName));
             }
         }
     }

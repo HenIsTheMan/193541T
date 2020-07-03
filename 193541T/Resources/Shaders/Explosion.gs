@@ -7,7 +7,6 @@ in myInterface{
     vec2 TexCoords;
     vec3 Normal;
     vec3 FragPos;
-    vec3 TexDir;
 } gsIn[];
 
 out myInterface{
@@ -15,26 +14,28 @@ out myInterface{
     vec2 TexCoords;
     vec3 Normal;
     vec3 FragPos;
-    vec3 TexDir;
 } gsOut;
 
 uniform float magnitude;
 uniform float time;
+uniform mat4 MVP;
 
 vec4 Explode(vec4 pos, vec3 normal){
-    vec3 dir = normal * ((sin(time) + 1.f) / 2.f) * magnitude; //Range of ((sin(time) + 1.f) / 2.f): [0, 1]
-    return pos + vec4(dir, 0.f);
+    return pos + vec4(normal * ((sin(time) + 1.f) / 2.f) * magnitude, 0.f);
 }
 
-vec3 GetNormal(){
-    return normalize(cross(vec3(gl_in[0].gl_Position) - vec3(gl_in[1].gl_Position), vec3(gl_in[2].gl_Position) - vec3(gl_in[1].gl_Position))); //Order matters
+vec3 CalcNormal(){
+    return cross(vec3(gl_in[2].gl_Position - gl_in[1].gl_Position), (gl_in[0].gl_Position - gl_in[1].gl_Position).xyz);
 }
 
 void main(){
-    vec3 normal = GetNormal();
+    vec3 normal = normalize(CalcNormal());
     for(int i = 0; i < 3; ++i){
-        gl_Position = Explode(gl_in[i].gl_Position, normal);
+        gl_Position = MVP * Explode(gl_in[i].gl_Position, normal);
+        gsOut.Colour = gsIn[i].Colour;
         gsOut.TexCoords = gsIn[i].TexCoords;
+        gsOut.Normal = gsIn[i].Normal;
+        gsOut.FragPos = gsIn[i].FragPos;
         EmitVertex();
     }
     EndPrimitive();
