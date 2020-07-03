@@ -74,8 +74,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\Users\SRHD\Desktop\193541T\193541T\Resources\Includes;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\SRHD\Desktop\193541T\193541T\Resources\Libs;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)\193541T\Resources\Includes;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)\193541T\Resources\Libs;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -151,6 +151,7 @@
     <ClCompile Include="Model.cpp" />
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="ShaderProg.cpp" />
+    <ClCompile Include="SpriteAni.cpp" />
     <ClCompile Include="Src.cpp" />
     <ClCompile Include="Utility.cpp" />
   </ItemGroup>
@@ -165,6 +166,7 @@
     <ClInclude Include="Model.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="ShaderProg.h" />
+    <ClInclude Include="SpriteAni.h" />
     <ClInclude Include="Src.h" />
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="Utility.h" />

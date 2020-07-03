@@ -1,7 +1,7 @@
 #include "Mesh.h"
-#include <random> //??
 
 int Mesh::primitiveRestartIndex = 0;
+std::vector<unsigned char> Mesh::heightMap;
 
 Mesh::Mesh(const std::vector<Vertex>* const& vertices, const std::vector<uint>* const& indices) noexcept{
     VAO = VBO = EBO = 0;
@@ -9,6 +9,7 @@ Mesh::Mesh(const std::vector<Vertex>* const& vertices, const std::vector<uint>* 
         this->vertices = *vertices;
     }
     this->indices = const_cast<std::vector<uint>* const&>(indices);
+    modelMatrices = nullptr;
 }
 
 Mesh::Mesh(const Mesh& other) noexcept{
@@ -20,6 +21,7 @@ Mesh::Mesh(const Mesh& other) noexcept{
         indices = new std::vector<uint>(*(other.indices));
     }
     textures = other.textures;
+    modelMatrices = nullptr;
 }
 
 Mesh::~Mesh() noexcept{
@@ -70,16 +72,12 @@ void Mesh::Init(const uint& instanceAmt){
         }
     }
 
-    glm::mat4* modelMatrices = new glm::mat4[instanceAmt];
-    float radius = 9.f;
-    float offset = 2.3f;
+    modelMatrices = new glm::mat4[instanceAmt];
     for(uint i = 0; i < instanceAmt; ++i){
-        float angle = (float)i / (float)instanceAmt * 360.f;
-        float displacement = (rand() % (int)(2 * offset * 100)) / 100.f - offset; //Multi??
-        ///transform x and z along the circle and randomly displace along circle with 'radius' in range [-offset, offset]??
-        glm::mat4 model = translate(glm::mat4(1.f), glm::vec3(sin(angle) * radius + displacement, 20.f + displacement * 0.4f, cos(angle) * radius + displacement));
-        model = rotate(model, float(rand() % 360), glm::vec3(0.4f, 0.6f, 0.8f));
-        model = scale(model, glm::vec3((rand() % 21) / 100.f + 0.05f));
+        const float xPos = float(rand() % (501 - 4)) - 248.f;
+        const float zPos = float(rand() % (501 - 4)) - 248.f;
+        glm::mat4 model = translate(glm::mat4(1.f), glm::vec3(xPos, -100.f + 100.f * Mesh::ReadHeightMap(Mesh::heightMap, xPos / 500.f, zPos / 500.f) + 4.f, zPos));
+        model = glm::scale(model, glm::vec3(4.f));
         modelMatrices[i] = model;
     }
 
@@ -123,11 +121,11 @@ void Mesh::Init(const uint& instanceAmt){
 
 Mesh* const Mesh::CreatePts(){
     Mesh* mesh = new Mesh;
-    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, 1.f, 0.f), glm::vec4(1.f, 0.f, 0.f, 1.f), glm::vec2(0.f, 0.f), glm::vec3(0.f, 0.f, 0.f)));
-    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, 1.f, 0.f), glm::vec4(0.f, 1.f, 0.f, 1.f), glm::vec2(0.f, 0.f), glm::vec3(0.f, 0.f, 0.f)));
-    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, -1.f, 0.f), glm::vec4(0.f, 0.f, 1.f, 1.f), glm::vec2(0.f, 0.f), glm::vec3(0.f, 0.f, 0.f)));
-    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, -1.f, 0.f), glm::vec4(1.f, 1.f, 0.f, 1.f), glm::vec2(0.f, 0.f), glm::vec3(0.f, 0.f, 0.f)));
-    mesh->vertices.emplace_back(Vertex(glm::vec3(0.f, 0.f, 0.f), glm::vec4(1.f, 0.f, 1.f, 1.f), glm::vec2(0.f, 0.f), glm::vec3(0.f, 0.f, 0.f)));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, 1.f, 0.f), glm::vec4(1.f, 0.f, 0.f, 1.f), glm::vec2(0.f), glm::vec3(0.f)));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, 1.f, 0.f), glm::vec4(0.f, 1.f, 0.f, 1.f), glm::vec2(0.f), glm::vec3(0.f)));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(1.f, -1.f, 0.f), glm::vec4(0.f, 0.f, 1.f, 1.f), glm::vec2(0.f), glm::vec3(0.f)));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(-1.f, -1.f, 0.f), glm::vec4(1.f, 1.f, 0.f, 1.f), glm::vec2(0.f), glm::vec3(0.f)));
+    mesh->vertices.emplace_back(Vertex(glm::vec3(0.f, 0.f, 0.f), glm::vec4(1.f, 0.f, 1.f, 1.f), glm::vec2(0.f), glm::vec3(0.f)));
     return mesh;
 }
 
@@ -211,6 +209,30 @@ Mesh* const Mesh::CreateCube(){
     return mesh;
 }
 
+Mesh* const Mesh::CreateSlicedTexQuad(const float& quadSize, const float& hTile, const float& vTile){
+    Mesh* mesh = new Mesh;
+    for(uint z = 0; z < (uint)quadSize; ++z){
+        for(uint x = 0; x < (uint)quadSize; ++x){
+            mesh->vertices.emplace_back(Vertex({float(x) / quadSize - .5f, 0.f, float(z) / quadSize - .5f}, glm::vec4(1.f), {float(x) / quadSize * hTile, 1.f - float(z) / quadSize * vTile}, {0.f, 1.f, 0.f}));
+        }
+    }
+    mesh->indices = new std::vector<uint>;
+    for(uint z = 0; z < uint(quadSize - 1.f); ++z){
+        for(uint x = 0; x < uint(quadSize - 1.f); ++x){
+            ///Triangle 1
+            (*(mesh->indices)).emplace_back(uint(quadSize * z + x + 0));
+            (*(mesh->indices)).emplace_back(uint(quadSize * (z + 1) + x + 0));
+            (*(mesh->indices)).emplace_back(uint(quadSize * z + x + 1));
+
+            ///Triangle 2
+            (*(mesh->indices)).emplace_back(uint(quadSize * (z + 1) + x + 1));
+            (*(mesh->indices)).emplace_back(uint(quadSize * z + x + 1));
+            (*(mesh->indices)).emplace_back(uint(quadSize * (z + 1) + x + 0));
+        }
+    }
+    return mesh;
+}
+
 void Mesh::Draw(const int& primitive, const uint& instanceAmt){
     try{
         if(instanceAmt == 0){
@@ -257,192 +279,110 @@ void Mesh::LoadTex(const cstr& fPath, const str& type, const bool&& flipTex){
     textures.emplace_back(tex);
 }
 
-std::vector<std::vector<float>> Mesh::GenRandHeightData(const HillAlgParams& params){
-    std::vector<std::vector<float>> heightData(params.rows, std::vector<float>(params.columns, 0.f));
-
-    std::random_device rd;
-    std::mt19937 generator(rd());
-    std::uniform_int_distribution<int> hillRadiusDistribution(params.hillRadiusMin, params.hillRadiusMax);
-    std::uniform_real_distribution<float> hillHeightDistribution(params.hillMinHeight, params.hillMaxHeight);
-    std::uniform_int_distribution<int> hillCenterRowIntDistribution(0, params.rows - 1);
-    std::uniform_int_distribution<int> hillCenterColIntDistribution(0, params.columns - 1);
-
-    for(int i = 0; i < params.numHills; ++i){
-        const auto hillCenterRow = hillCenterRowIntDistribution(generator);
-        const auto hillCenterCol = hillCenterColIntDistribution(generator);
-        const auto hillRadius = hillRadiusDistribution(generator);
-        const auto hillHeight = hillHeightDistribution(generator);
-        for(auto r = hillCenterRow - hillRadius; r < hillCenterRow + hillRadius; ++r){
-            for(auto c = hillCenterCol - hillRadius; c < hillCenterCol + hillRadius; ++c){
-                if(r < 0 || r >= params.rows || c < 0 || c >= params.columns){
-                    continue;
-                }
-                const auto r2 = hillRadius * hillRadius; //r*r ter??
-                const auto x2x1 = hillCenterCol - c; //(x2-x1) ter??
-                const auto y2y1 = hillCenterRow - r; //(y2-y1) ter??
-                const auto height = float(r2 - x2x1 * x2x1 - y2y1 * y2y1);
-                if(height < 0.f){ //should not happen, but checks like this won't hurt anyway
-                    continue;
-                }
-
-                //we calculate a factor, how far is that number on scale from 0.0 to r2 and we add the random hill height multiplied by this factor. We also make sure however, that we don't exceed 1.0, which is the maximum possible height. This way we keep the heightmap data between 0.0 and 1.0 for sure!
-                const auto factor = height / r2;
-                heightData[r][c] += hillHeight * factor;
-                if(heightData[r][c] > 1.f) {
-                    heightData[r][c] = 1.f;
-                }
-            }
-        }
+bool Mesh::LoadHeightMap(cstr file_path, std::vector<unsigned char>& heightMap){
+    std::ifstream fileStream(file_path, std::ios::binary);
+    if(!fileStream.is_open()){
+        std::cout << "Impossible to open " << file_path << ". Are you in the right directory ?\n";
+        return false;
     }
-    return heightData;
+
+    fileStream.seekg(0, std::ios::end);
+    std::streampos fsize = (unsigned)fileStream.tellg();
+
+    fileStream.seekg(0, std::ios::beg);
+    heightMap.resize((unsigned)fsize);
+    fileStream.read((char*)&heightMap[0], fsize);
+
+    fileStream.close();
+    return true;
 }
 
-const std::vector<std::vector<float>> Mesh::ExtractHeightData(cstr const& fPath){
-    stbi_set_flip_vertically_on_load(1);
-    int w, h, bytesPerPixel;
-    const unsigned char* imgData = stbi_load(fPath, &w, &h, &bytesPerPixel, 0);
-    if(!imgData){
+float Mesh::ReadHeightMap(std::vector<unsigned char> &heightMap, float x, float z){
+    if(heightMap.size() == 0 || x <= -0.5f || x >= 0.5f || z <= -0.5f || z >= 0.5f){
+        return 0.f;
+    }
+
+    const float SCALE_FACTOR = 256.f;
+    unsigned terrainSize = (unsigned)sqrt((double)heightMap.size());
+    unsigned zCoord = (unsigned)((z + 0.5f) * terrainSize);
+    unsigned xCoord = (unsigned)((x + 0.5f) * terrainSize);
+
+    return (float)heightMap[zCoord * terrainSize + xCoord] / SCALE_FACTOR;
+}
+
+Mesh* const Mesh::CreateHeightMap(cstr const& fPath, const float& hTile, const float& vTile){
+    Mesh* mesh = new Mesh;
+    if(!LoadHeightMap(fPath, heightMap)){
         exit(1);
     }
+    const float SCALE_FACTOR = 256.f; //Set a scale factor to size terrain
+    unsigned terrainSize = (unsigned)sqrt((double)heightMap.size()); //Calc the terrainSize
 
-    std::vector<std::vector<float>> result(h, std::vector<float>(w));
-    const unsigned char* pixelPtr = &imgData[0]; //Also can take G or B component
-    for(short i = 0; i < h; ++i){
-        for(short j = 0; j < w; ++j){
-            result[i][j] = float(*pixelPtr) / 255.f;
-            pixelPtr += bytesPerPixel;
-        }
-    } //At the end of the loop, the ptr is increased by number of bytes per pixel, which means we're jumping to the next pixel
-    stbi_image_free(const_cast<unsigned char*>(imgData));
-    return result;
-}
-
-Mesh* const Mesh::CreateRandHeightMap(const HillAlgParams& params){
-    std::vector<std::vector<float>> heightData = GenRandHeightData(params);
-    int rows = int(heightData.size()), columns = int(heightData[0].size());
-
-    Mesh* mesh = new Mesh;
-    GenHeightMapVertices(mesh, heightData, rows, columns);
-    GenHeightMapIndices(mesh, rows, columns);
-    return mesh;
-
-    ////Clear the data, we won't need it anymore
-    //_vertices.clear();
-    //_textureCoordinates.clear();
-    //_normals.clear();
-}
-
-Mesh* const Mesh::CreateHeightMap(cstr const& fPath){
-    std::vector<std::vector<float>> heightData = ExtractHeightData(fPath);
-    int rows = int(heightData.size()), columns = int(heightData[0].size());
-
-    Mesh* mesh = new Mesh;
-    GenHeightMapVertices(mesh, heightData, rows, columns);
-    GenHeightMapIndices(mesh, rows, columns);
-    return mesh;
-}
-
-void Mesh::GenHeightMapVertices(Mesh* const& mesh, const std::vector<std::vector<float>>& heightData, const int& rows, const int& columns){
-    auto pos = std::vector<std::vector<glm::vec3>>(rows, std::vector<glm::vec3>(columns));
-    auto texCoords = std::vector<std::vector<glm::vec2>>(rows, std::vector<glm::vec2>(columns));
-    const auto textureStepU = .001f, textureStepV = .001f; //Smaller means tex repeats lesser
-    for(auto i = 0; i < rows; ++i){
-        for(auto j = 0; j < columns; ++j){
-            const auto factorRow = float(i) / float(rows - 1);
-            const auto factorColumn = float(j) / float(columns - 1);
-            const auto& vertexHeight = heightData[i][j];
-            pos[i][j] = glm::vec3(-0.5f + factorColumn, vertexHeight, -0.5f + factorRow);
-
-            texCoords[i][j] = glm::vec2(textureStepU * j, textureStepV * i);
+    std::vector<std::vector<glm::vec3>> pos = std::vector<std::vector<glm::vec3>>(terrainSize, std::vector<glm::vec3>(terrainSize));
+    for(unsigned z = 0; z < terrainSize; ++z){
+        for(unsigned x = 0; x < terrainSize; ++x){
+            float scaledHeight = (float)heightMap[z * terrainSize + x] / SCALE_FACTOR; //Divide by SCALE_FACTOR to normalise
+            pos[z][x] = glm::vec3(float(x) / terrainSize - .5f, scaledHeight, float(z) / terrainSize - .5f);
         }
     }
 
-    auto normals = std::vector<std::vector<glm::vec3>>(rows, std::vector<glm::vec3>(columns));
+    std::vector<std::vector<glm::vec3>> normals = std::vector<std::vector<glm::vec3>>(terrainSize, std::vector<glm::vec3>(terrainSize));
     std::vector<std::vector<glm::vec3>> tempNormals[2];
-    for(auto i = 0; i < 2; ++i){
-        tempNormals[i] = std::vector<std::vector<glm::vec3>>(rows - 1, std::vector<glm::vec3>(columns - 1));
+    for(short i = 0; i < 2; ++i){
+        tempNormals[i] = std::vector<std::vector<glm::vec3>>(terrainSize, std::vector<glm::vec3>(terrainSize));
     }
-    for(auto i = 0; i < rows - 1; ++i){
-        for(auto j = 0; j < columns - 1; ++j){
-            const auto& vertexA = pos[i][j];
-            const auto& vertexB = pos[i][j + 1];
-            const auto& vertexC = pos[i + 1][j + 1];
-            const auto& vertexD = pos[i + 1][j];
-
+    for(unsigned z = 0; z < terrainSize - 1; ++z){
+        for(unsigned x = 0; x < terrainSize - 1; ++x){
+            const auto& vertexA = pos[z][x];
+            const auto& vertexB = pos[z][x + 1];
+            const auto& vertexC = pos[z + 1][x + 1];
+            const auto& vertexD = pos[z + 1][x];
             const auto triangleNormalA = glm::cross(vertexB - vertexA, vertexA - vertexD);
             const auto triangleNormalB = glm::cross(vertexD - vertexC, vertexC - vertexB);
-
-            tempNormals[0][i][j] = triangleNormalA.length() ? glm::normalize(triangleNormalA) : triangleNormalA;
-            tempNormals[1][i][j] = triangleNormalB.length() ? glm::normalize(triangleNormalB) : triangleNormalB;
+            tempNormals[0][z][x] = triangleNormalA.length() ? glm::normalize(triangleNormalA) : triangleNormalA;
+            tempNormals[1][z][x] = triangleNormalB.length() ? glm::normalize(triangleNormalB) : triangleNormalB;
         }
     }
-    for(auto i = 0; i < rows; ++i){
-        for(auto j = 0; j < columns; ++j){
-            const auto isFirstRow = i == 0;
-            const auto isFirstColumn = j == 0;
-            const auto isLastRow = i == rows - 1;
-            const auto isLastColumn = j == columns - 1;
+    for(unsigned z = 0; z < terrainSize; ++z){
+        for(unsigned x = 0; x < terrainSize; ++x){
+            const auto isFirstRow = z == 0;
+            const auto isFirstColumn = x == 0;
+            const auto isLastRow = z == terrainSize - 1;
+            const auto isLastColumn = x == terrainSize - 1;
             auto finalVertexNormal = glm::vec3(0.f);
             if(!isFirstRow && !isFirstColumn){ //Look for triangle to the upper-left
-                finalVertexNormal += tempNormals[0][i - 1][j - 1];
+                finalVertexNormal += tempNormals[0][z - 1][x - 1];
             }
             if(!isFirstRow && !isLastColumn){ //Look for triangles to the upper-right
                 for(auto k = 0; k < 2; ++k){
-                    finalVertexNormal += tempNormals[k][i - 1][j];
+                    finalVertexNormal += tempNormals[k][z - 1][x];
                 }
             }
             if(!isLastRow && !isLastColumn){ //Look for triangle to the bottom-right
-                finalVertexNormal += tempNormals[0][i][j];
+                finalVertexNormal += tempNormals[0][z][x];
             }
             if(!isLastRow && !isFirstColumn){ //Look for triangles to the bottom-right
                 for(auto k = 0; k < 2; ++k){
-                    finalVertexNormal += tempNormals[k][i][j - 1];
+                    finalVertexNormal += tempNormals[k][z][x - 1];
                 }
             }
-            normals[i][j] = finalVertexNormal.length() ? glm::normalize(finalVertexNormal) : finalVertexNormal; //Store final normal of j-th vertex in i-th row //Normalize to give avg of 4 normals
-
-            mesh->vertices.emplace_back(pos[i][j], glm::vec4(1.f), texCoords[i][j], normals[i][j]);
+            normals[z][x] = finalVertexNormal.length() ? glm::normalize(finalVertexNormal) : finalVertexNormal; //Store final normal of j-th vertex in i-th row //Normalize to give avg of 4 normals
+            mesh->vertices.emplace_back(Vertex(pos[z][x], glm::vec4(1.f), glm::vec2(float(x) / terrainSize * hTile, 1.f - float(z) / terrainSize * vTile), normals[z][x]));
         }
     }
-}
 
-void Mesh::GenHeightMapIndices(Mesh* const& mesh, const int& rows, const int& columns){ //set primitive restart index, which is number of vertices, just like in case of torus and in every row we add vertices one by one and finalize the row with primitive restart index
-    primitiveRestartIndex = rows * columns; //numVertices = rows * columns
     mesh->indices = new std::vector<uint>;
-
-    for(auto i = 0; i < rows - 1; ++i){
-        for(auto j = 0; j < columns; ++j){
-            for(auto k = 0; k < 2; ++k){
-                const auto row = i + k;
-                const auto index = row * columns + j;
-                mesh->indices->emplace_back(index);
-            }
-        }
-        mesh->indices->emplace_back(primitiveRestartIndex); //Restart triangle strips
-    }
-    //// Calculate total count of indices
-    //_numIndices = (rows - 1) * columns * 2 + rows - 1;
-}
-
-Mesh* const Mesh::CreateSlicedTexQuad(const float& quadSize, const float& hTile, const float& vTile){
-    Mesh* mesh = new Mesh;
-    for(uint z = 0; z < (uint)quadSize; ++z){
-        for(uint x = 0; x < (uint)quadSize; ++x){
-            mesh->vertices.emplace_back(Vertex({float(x) / quadSize - .5f, 0.f, float(z) / quadSize - .5f}, glm::vec4(1.f), {float(x) / quadSize * hTile, 1.f - float(z) / quadSize * vTile}, {0.f, 1.f, 0.f}));
-        }
-    }
-    mesh->indices = new std::vector<uint>;
-    for(uint z = 0; z < uint(quadSize - 1.f); ++z){
-        for(uint x = 0; x < uint(quadSize - 1.f); ++x){
+    for(unsigned z = 0; z < terrainSize - 1; ++z){
+        for(unsigned x = 0; x < terrainSize - 1; ++x){
             ///Triangle 1
-            (*(mesh->indices)).emplace_back(uint(quadSize * z + x + 0));
-            (*(mesh->indices)).emplace_back(uint(quadSize * (z + 1) + x + 0));
-            (*(mesh->indices)).emplace_back(uint(quadSize * z + x + 1));
+            mesh->indices->emplace_back(terrainSize * z + x + 0);
+            mesh->indices->emplace_back(terrainSize * (z + 1) + x + 0);
+            mesh->indices->emplace_back(terrainSize * z + x + 1);
 
             ///Triangle 2
-            (*(mesh->indices)).emplace_back(uint(quadSize * (z + 1) + x + 1));
-            (*(mesh->indices)).emplace_back(uint(quadSize * z + x + 1));
-            (*(mesh->indices)).emplace_back(uint(quadSize * (z + 1) + x + 0));
+            mesh->indices->emplace_back(terrainSize * (z + 1) + x + 1);
+            mesh->indices->emplace_back(terrainSize * z + x + 1);
+            mesh->indices->emplace_back(terrainSize * (z + 1) + x + 0);
         }
     }
     return mesh;

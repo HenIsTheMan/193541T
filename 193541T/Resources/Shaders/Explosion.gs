@@ -6,14 +6,14 @@ in myInterface{
     vec4 Colour;
     vec2 TexCoords;
     vec3 Normal;
-    vec3 FragPos;
+    vec3 FragPosWorldSpace;
 } gsIn[];
 
 out myInterface{
     vec4 Colour;
     vec2 TexCoords;
     vec3 Normal;
-    vec3 FragPos;
+    vec3 FragPosWorldSpace;
 } gsOut;
 
 layout (std140) uniform ExplosionUnis{ //std140 is the uni block layout (mem layout used by a uni block to store its content)
@@ -39,7 +39,7 @@ void main(){
         gsOut.Colour = gsIn[i].Colour;
         gsOut.TexCoords = gsIn[i].TexCoords;
         gsOut.Normal = gsIn[i].Normal;
-        gsOut.FragPos = gsIn[i].FragPos;
+        gsOut.FragPosWorldSpace = gsIn[i].FragPosWorldSpace;
         EmitVertex();
     }
     EndPrimitive();

@@ -98,7 +98,7 @@ void App::Render(const Cam& cam) const{
     uint depthTexs[]{dDepthMapFBO->GetTex().GetRefID(), sDepthMapFBO->GetTex().GetRefID()};
 
     ///Dynamic environment mapping (use dynamically-generated cubemap textured with 6 diff angles of scene as seen from a cam to create reflective and refractive surfaces that include other instances, avoid and/or use pre-rendered cubemaps as expensive)
-    Cam enCam(glm::vec3(0.f), glm::vec3(0.f), glm::vec3(0.f), 2, 1.f);
+    Cam enCam(glm::vec3(0.f, .2f, 0.f), glm::vec3(0.f), glm::vec3(0.f), 2, 1.f);
     float initialAngularFOV = angularFOV;
     angularFOV = 90.f;
     glViewport(0, 0, 1700, 1700);
@@ -120,7 +120,7 @@ void App::Render(const Cam& cam) const{
     RenderSceneToCreatedFB(Cam(cam.GetPos(), cam.GetPos() + cam.GetPos() - cam.GetTarget(), cam.GetUp()), backFBO, enFBO, depthTexs);
     glClear(GL_COLOR_BUFFER_BIT);
     RenderSceneToDefaultFB(frontFBO, intermediateFBO, typePPE);
-    RenderSceneToDefaultFB(backFBO, intermediateFBO, typePPE, glm::vec3(-.5f, .5f, 0.f), glm::vec3(.5f));
+    //RenderSceneToDefaultFB(backFBO, intermediateFBO, typePPE, glm::vec3(-.5f, .5f, 0.f), glm::vec3(.5f));
 }
 
 ///Attach a z-buffer/depth buffer (stores depth value of frags clamped to [0, 1] from a cam's POV as 16, 24 or 32 bit floats, same width and height as colour buffer) and a stencil buffer as a single tex (each 32-bit value of the tex contains 24 bits of depth info and 8 bits of stencil info)

@@ -37,7 +37,7 @@ glm::vec3 Cam::CalcUp() const{
 }
 
 void Cam::Update(const int& up, const int& down, const int& left, const int& right, const int& front, const int& back){
-	const float camSpd = 12.f * dt;
+	const float camSpd = 150.f * dt;
 	float upDown = float(App::Key(up) - App::Key(down));
 	float leftRight = float(App::Key(left) - App::Key(right));
 	float frontBack = float(App::Key(front) - App::Key(back));
@@ -52,6 +52,7 @@ void Cam::Update(const int& up, const int& down, const int& left, const int& rig
 		change = normalize(change);
 	}
 	pos += camSpd * change;
+	pos.y = std::max(-100.f + 100.f * Mesh::ReadHeightMap(Mesh::heightMap, pos.x / 500.f, pos.z / 500.f) + 1.f, pos.y);
 	target += camSpd * change;
 
 	glm::mat4 yawPitch = glm::rotate(glm::rotate(glm::mat4(1.f), glm::radians(yaw), {0.f, 1.f, 0.f}), glm::radians(pitch), CalcRight());

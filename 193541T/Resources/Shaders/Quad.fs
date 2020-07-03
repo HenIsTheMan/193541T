@@ -5,7 +5,7 @@ in myInterface{
     vec4 Colour;
     vec2 TexCoords;
     vec3 Normal;
-    vec3 FragPos;
+    vec3 FragPosWorldSpace;
 } fsIn;
 
 uniform sampler2D texSampler;
@@ -28,9 +28,6 @@ void main(){
         FragColor.a = min(FragColor.a, 1.f);
     }
 
-    /*if(FragColor.a < .1f){
-        discard; //Discard fragments (not stored in the color buffer) over blending them for fully transparent objs so no depth issues
-    }*/
     //FragColor = vec4(vec3(1.f) - vec3(depthLinearised / far), 1.f); //For visualising the depth buffer //Divide by far to make range [0, 1] as linearised depth values range from near to far
     //FragColor = vec4(vec3(gl_FragCoord.z), 1.f);
 }

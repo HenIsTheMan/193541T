@@ -12,10 +12,13 @@ out myInterface{ //Output interface block
     vec4 Colour;
     vec2 TexCoords;
     vec3 Normal;
-    vec3 FragPos;
+    vec3 FragPosWorldSpace;
 } vsOut; //Instance
 
+out vec3 FragPosLocalSpace;
 out mat3 TBN;
+out vec3 FragViewSpacePos;
+out vec3 FragClipSpacePos;
 
 uniform mat4 MVP;
 uniform mat4 model, view, projection;
@@ -29,17 +32,22 @@ uniform bool wave;
 uniform float time;
 
 void main(){
+    FragPosLocalSpace = aPos;
     vsOut.Colour = aColor;
     vsOut.TexCoords = aTexCoords;
     vsOut.Normal = mat3(transpose(inverse(model))) * aNormal; //Multiplication with normal matrix
-    vsOut.FragPos = vec3(model * vec4(aPos, 1.f));
+    vsOut.FragPosWorldSpace = vec3(model * vec4(aPos, 1.f));
+
     if(wave){
 		vec4 worldSpacePos = model * vec4(aPos, 1.f);
-		worldSpacePos.y += sin(worldSpacePos.x + time) * cos(worldSpacePos.z + time) * 50.f;
+		worldSpacePos.y += sin(worldSpacePos.x + time) * cos(worldSpacePos.z + time) * 5.f;
 		gl_Position = projection * view * worldSpacePos;
 		//vsOut.TexCoords.x += time;
+        FragViewSpacePos = vec3(view * worldSpacePos);
+        FragClipSpacePos = gl_Position.xyz;
         return;
 	}
+    FragViewSpacePos = vec3(view * model * vec4(aPos, 1.f));
 
 
 
@@ -59,25 +67,43 @@ void main(){
     if(useOffset){
         vec3 downscaledPos = aPos * (gl_InstanceID / 100.f); //gl_InstanceID is incremented for each instanced draw/... call
         gl_Position = MVP * vec4(downscaledPos + vec3(aOffset, 0.f), 1.f);
+        FragClipSpacePos = gl_Position.xyz;
         return;
     }
     if(useMat){
         vsOut.Normal = mat3(transpose(inverse(instanceMatrix))) * aNormal;
-        vsOut.FragPos = vec3(instanceMatrix * vec4(aPos, 1.f));
-        gl_Position = projection * view * instanceMatrix * vec4(aPos, 1.f);
+        vsOut.FragPosWorldSpace = vec3(instanceMatrix * vec4(aPos, 1.f));
+        mat4 modelView = view * instanceMatrix;
+
+        ///Remove rotation
+        modelView[0][0] = modelView[1][1];
+        modelView[2][2] = modelView[1][1];
+        modelView[0][1] = 0;
+        modelView[1][0] = 0;
+        modelView[0][2] = 0;
+        modelView[2][0] = 0;
+        modelView[2][1] = 0;
+        modelView[1][2] = 0;
+        FragViewSpacePos = vec3(modelView * vec4(aPos, 1.f));
+
+        gl_Position = projection * vec4(FragViewSpacePos, 1.f);
+        FragClipSpacePos = gl_Position.xyz;
         return;
     }
     if(screenQuad){
         gl_Position = model * vec4(aPos.x, aPos.y, 0.f, 1.f); //What if z != 0.f??
+        FragClipSpacePos = gl_Position.xyz;
         return;
     }
     if(cubemap){
         gl_Position = projection * view * vec4(aPos, 1.f);
         gl_Position = gl_Position.xyww; //Resulting NDC after perspective division will have a z value (gl_FragCoord.z) equal to 1.f (max depth value) so skybox appears behind all other objs
+        FragClipSpacePos = gl_Position.xyz;
         return;
     }
     if(explosion){
         gl_Position = vec4(aPos, 1.f);
+        FragClipSpacePos = gl_Position.xyz;
         return;
     }
     if(drawNormals){
@@ -85,4 +111,5 @@ void main(){
         vsOut.Normal = normalize(vec3(projection * vec4(normalMtx * aNormal, 0.f))); //Transformed clip-space normal vec //Multiply by normalMatrix to acct for scaling and rotations due to view and model matrix??
     }
     gl_Position = MVP * vec4(aPos, 1.f);
+    FragClipSpacePos = gl_Position.xyz;
 }

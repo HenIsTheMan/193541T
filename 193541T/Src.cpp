@@ -44,7 +44,7 @@ int main(){
     }
 
     App* app = new App; //Implement Factory Method design pattern??
-    Cam* cam = new Cam(glm::vec3(0.f, 0.f, -5.f), glm::vec3(0.f), glm::vec3(0.f, 1.f, 0.f));
+    Cam* cam = new Cam(glm::vec3(0.f, 0.f, 15.f), glm::vec3(0.f), glm::vec3(0.f, 1.f, 0.f));
     while(!glfwWindowShouldClose(App::win)){ //Main loop
         glfwSetWindowShouldClose(App::win, glfwGetKey(App::win, GLFW_KEY_ESCAPE));
         app->Update(*cam);

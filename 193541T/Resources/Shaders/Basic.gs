@@ -8,14 +8,14 @@ in myInterface{ //Input interface block
     vec4 Colour;
     vec2 TexCoords;
     vec3 Normal;
-    vec3 FragPos;
+    vec3 FragPosWorldSpace;
 } gsIn[]; //Interface block arr (arr as most render primitives formed in Primitive/Shape Assembly have > 1 vertex)
 
 out myInterface{
     vec4 Colour; //Fragment shader expects only 1 interpolated colour //Emitted vertices have the last stored value in Colour
     vec2 TexCoords;
     vec3 Normal;
-    vec3 FragPos;
+    vec3 FragPosWorldSpace;
 } gsOut;
 
 void MakePt(vec4 pos){ //Pass-through geometry shader (takes a primitive as its input and passes it to the next shader unmodified)
@@ -48,7 +48,7 @@ void main(){
     gsOut.Colour = gsIn[0].Colour;
     gsOut.TexCoords = gsIn[0].TexCoords;
     gsOut.Normal = gsIn[0].Normal;
-    gsOut.FragPos = gsIn[0].FragPos;
+    gsOut.FragPosWorldSpace = gsIn[0].FragPosWorldSpace;
 
     MakePt(gl_in[0].gl_Position);
     //MakeLine(gl_in[0].gl_Position);

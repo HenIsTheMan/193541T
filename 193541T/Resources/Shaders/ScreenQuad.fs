@@ -5,7 +5,7 @@ in myInterface{
     vec4 Colour;
     vec2 TexCoords;
     vec3 Normal;
-    vec3 FragPos;
+    vec3 FragPosWorldSpace;
 } fsIn;
 
 uniform int typePPE; //Type of post-processing effect
