@@ -114,7 +114,7 @@ void App::Render(const Cam& cam) const{
     glCullFace(GL_BACK); //Another consideration is that objects that are close to the shadow receiver (like the distant cube) may still give incorrect results??
     glViewport(0, 0, 800, 600); //Render scene in win resolution
     
-    ////2nd set of render passes: render scenes with directional shadow mapping
+    ////2nd set of render passes: render scene(s) with directional shadow mapping
     Tex depthTexs[]{dDepthMapFBO->GetTex(), sDepthMapFBO->GetTex()};
 
     ///Dynamic environment mapping (use dynamically-generated cubemap textured with 6 diff angles of scene as seen from a cam to create reflective and refractive surfaces that include other instances, avoid and/or use pre-rendered cubemaps as expensive)
