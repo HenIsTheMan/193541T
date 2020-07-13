@@ -37,7 +37,7 @@ public:
 	int currentFrame;
 	static SpriteAnimation* const CreateSpriteAni(const unsigned& numRow, const unsigned& numCol);
 	void AddAnimation(std::string name, int start, int end);
-	void AddSequeneAnimation(std::string name, int count ...);
+	void AddSequenceAnimation(std::string name, int count ...);
 	void PlayAnimation(std::string name, int repeat, float time);
 	void Pause();
 	void Resume();

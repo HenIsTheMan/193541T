@@ -51,7 +51,7 @@ void SpriteAnimation::AddAnimation(std::string anim_name, int start, int end){
 	animationList[anim_name]->animActive = false;
 }
 
-void SpriteAnimation::AddSequeneAnimation(std::string anim_name, int count...){
+void SpriteAnimation::AddSequenceAnimation(std::string anim_name, int count...){
 	Animation* anim = new Animation();
 	va_list args;
 	va_start(args, count);

@@ -101,7 +101,7 @@ void main(){
     }
     if(cubemap){
         gl_Position = projection * view * vec4(aPos, 1.f);
-        gl_Position = gl_Position.xyww; //Resulting NDC after perspective division will have a z value (gl_FragCoord.z) equal to 1.f (max depth value) so skybox appears behind all other objs
+        gl_Position = gl_Position.xyww; //Resulting NDC after perspective division will have a z value (gl_FragCoord.z) equal to 1.f
         FragClipSpacePos = gl_Position.xyz;
         return;
     }
