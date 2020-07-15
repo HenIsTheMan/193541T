@@ -271,8 +271,8 @@ void Scene::Init(){
     //for(float i = 0.f; i < 5.f; ++i){ //Point light can cover a dist of 50 (from given table)
     //    LightChief::CreateLightP(glm::vec3(0.f, -5.f, 0.f), 1.f, .09f, .032f);
     //}
-    //LightChief::CreateLightD(glm::vec3(0.f, -1.f, 0.f));
-    LightChief::CreateLightS(glm::vec3(0.f), glm::vec3(0.f), glm::cos(glm::radians(12.5f)), glm::cos(glm::radians(17.5f)));
+    LightChief::CreateLightD(glm::vec3(0.f, -1.f, 0.f));
+    //LightChief::CreateLightS(glm::vec3(0.f), glm::vec3(0.f), glm::cos(glm::radians(12.5f)), glm::cos(glm::radians(17.5f)));
 
     canPutOutFire = false;
     showFire = true;
@@ -327,7 +327,7 @@ void Scene::RenderToCreatedFB(Cam const& cam, const Tex* const& enCubemap, const
         glm::mat4 sLightSpaceVP = glm::perspective(glm::radians(angularFOV), 1024.f / 1024.f, 20.f, 50.f) * cam.LookAt(); //Non-linear depth due to perspective division with its noticeable range close to the near plane when visualising depth buffer
         basicShaderProg->Use();
         ShaderProg::SetUni1i("depthOnly", 0);
-        ShaderProg::SetUni1i("showShadowsD", 0);
+        ShaderProg::SetUni1i("showShadowsD", 1);
         ShaderProg::SetUni1i("showShadowsS", 0);
         ShaderProg::SetUniMtx4fv("dLightSpaceVP", glm::value_ptr(dLightSpaceVP));
         ShaderProg::SetUniMtx4fv("sLightSpaceVP", glm::value_ptr(sLightSpaceVP));

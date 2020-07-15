@@ -68,7 +68,7 @@ vec3 normal = normalize(bump ? TBN * (texture(material.nMap, fsIn.TexCoords).rgb
 
 ///Light components (store in class??)
 const vec3 lightAmbient = vec3(.05f); //Small value for small impact
-const vec3 lightDiffuse = vec3(100.f); //Set to desired colour of light
+const vec3 lightDiffuse = vec3(.8f); //Set to desired colour of light
 const vec3 lightSpecular = vec3(1.f);
 
 in vec3 FragPosLocalSpace;

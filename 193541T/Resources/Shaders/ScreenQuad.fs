@@ -62,7 +62,7 @@ void main(){
     }
 
     //FragColor.rgb = FragColor.rgb / (FragColor.rgb + vec3(1.f)); //Reinhard tone mapping alg (evenly balances out colour values, tend to slightly favour bright areas)
-    const float exposure = .1f; //Default is 1.f
+    const float exposure = 1.f; //Default is 1.f
     FragColor.rgb = vec3(1.f) - exp(-FragColor.rgb * exposure); //Exposure tone mapping (day and night cycle, config lighting parameters with exposure parameter [selectively favors bright or dark regions])??
 
     const float gamma = 2.2f; //sRGB colour space roughly corresponds to a monitor gamma of 2.2
