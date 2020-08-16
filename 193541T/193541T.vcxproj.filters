@@ -99,4 +99,36 @@
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Shaders\Basic.fs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="Resources\Shaders\Basic.gs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="Resources\Shaders\Basic.vs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="Resources\Shaders\Blur.fs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="Resources\Shaders\Blur.vs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="Resources\Shaders\Explosion.gs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="Resources\Shaders\Normals.gs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="Resources\Shaders\Outline.fs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="Resources\Shaders\Quad.fs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="Resources\Shaders\ScreenQuad.fs">
+      <Filter>Resource Files</Filter>
+    </None>
+  </ItemGroup>
 </Project>

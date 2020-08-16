@@ -139,7 +139,7 @@ uniform bool showShadowsS;
 uniform sampler2D shadowMapD;
 uniform sampler2D shadowMapS;
 
-float NotShadow(vec3 lightDir, sampler2D shadowMap, vec4 FragPosFromLight){ //Shadows (adds realism to a lit scene, makes spatial relationship between objs easier to observe, gives greater sense of depth to scene and objs in it) are formed with absence of light due to occlusion
+float NotInShadow(vec3 lightDir, sampler2D shadowMap, vec4 FragPosFromLight){ //Shadows (adds realism to a lit scene, makes spatial relationship between objs easier to observe, gives greater sense of depth to scene and objs in it) are formed with absence of light due to occlusion
     vec3 projectedFragCoords = FragPosFromLight.xyz / FragPosFromLight.w; //Transform pt in light's visible coord space/clip space (-w, w) to NDC (-1 to 1) thru perspective division (divide gl_Position's xyz coords by its w-component, done automatically after vertex shader step if output clip-space vertex pos thru gl_Position, allows both types of projection to be used)
     projectedFragCoords = projectedFragCoords * .5f + .5f; //Transform NDC to range of [0, 1] so can use to index/... from depth/... map //Because the depth from the depth map is in the range [0, 1]??
     if(projectedFragCoords.z > 1.f){ //Reduce oversampling of depth/... map (...) by accting for currDepth > 1.f when projectedFragCoords.z > 1.f if light-space projected frag is outside far plane of light's... (in dark region at the far end [in the dir of shadows] of light's...)
@@ -178,7 +178,7 @@ vec3 CalcDirectionalLight(DirectionalLight light){ //Calc directional light's co
     vec3 lightDir = normalize(light.dir);
     //vec3 lightDir = TBN * normalize(light.dir);
 
-    return CalcAmbient() + (showShadowsD ? NotShadow(lightDir, shadowMapD, FragPosFromLightD) : 1.f) * (CalcDiffuse(lightDir) + CalcSpecular(lightDir));
+    return CalcAmbient() + (showShadowsD ? NotInShadow(lightDir, shadowMapD, FragPosFromLightD) : 1.f) * (CalcDiffuse(lightDir) + CalcSpecular(lightDir));
 }
 
 vec3 CalcSpotlight(Spotlight light){ //Calc spotlight's contribution vec
@@ -188,7 +188,7 @@ vec3 CalcSpotlight(Spotlight light){ //Calc spotlight's contribution vec
     float cosTheta = dot(lightDir, normalize(light.dir));
     float epsilon = light.cosInnerCutoff - light.cosOuterCutoff; //Soft/Smooth edges (using inner and outer cone, interpolate between outer cos and inner cos based on theta)
     float lightIntensity = clamp((cosTheta - light.cosOuterCutoff) / epsilon, 0.f, 1.f); //-ve when outside the outer cone of the spotlight and > 1.f when inside... before clamping
-    return CalcAmbient() + (showShadowsS ? NotShadow(lightDir, shadowMapS, FragPosFromLightS) : 1.f) * lightIntensity * (CalcDiffuse(lightDir) + CalcSpecular(lightDir)); //Leave ambient component unaffected by lightIntensity so length(ambient) > 0
+    return CalcAmbient() + (showShadowsS ? NotInShadow(lightDir, shadowMapS, FragPosFromLightS) : 1.f) * lightIntensity * (CalcDiffuse(lightDir) + CalcSpecular(lightDir)); //Leave ambient component unaffected by lightIntensity so length(ambient) > 0
 }
 
 struct Fog{
