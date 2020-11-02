@@ -41,6 +41,8 @@ void main(){
         vec2(offset, -offset) //Bottom right
     );
 
+    vec2 dist;
+    float r;
     vec4 colResult = vec4(vec3(texture(screenTex, fsIn.TexCoords) + texture(blurredTex, fsIn.TexCoords)), texture(screenTex, fsIn.TexCoords).a); //Additive blending
     switch(typePPE){
         case 0: FragColor = colResult; break;
@@ -50,11 +52,32 @@ void main(){
             //float avg = (FragColor.r + FragColor.g + FragColor.b) / 3.f;
             float avg = .2126f * FragColor.r + .7152f * FragColor.g + .0722f * FragColor.b; //Weighted grayscale (weighted colour channels used, most physically accurate)
             FragColor = vec4(vec3(avg), 1.f);
-        } break;
-
-        case 3: ApplyKernel(offsets, float[](-1, -1, -1, -1, 9, -1, -1, -1, -1)); break; //Sharpen kernel (sharpens each colour value by sampling all surrounding pixels)
-        case 4: ApplyKernel(offsets, float[](.0625f, .125f, .0625f, .125f, .25f, .125f, .0625f, .125f, .0625f)); break; //Blur kernel (vary blur amt over time for drunk effect, can use blur for smoothing colour values) //Because all values add up to 16, directly returning the combined sampled colors would result in an extremely bright color so we have to divide each value of the kernel by 16??
-        default: ApplyKernel(offsets, float[](1.f, 1.f, 1.f, 1.f, -8.f, 1.f, 1.f, 1.f, 1.f)); //Edge-detection kernel (highlights all edges and darkens the rest)
+            break;
+        }
+        case 3: //Vignette
+            float multiplier = 1.7f;
+            vec3 tint = vec3(0.01f);
+        	dist = fsIn.TexCoords - vec2(.5f);
+	        r = 1.f - length(dist) * multiplier;
+	        FragColor = vec4(mix(tint, texture(screenTex, fsIn.TexCoords).rgb, r), 1.f);
+            break;
+        case 4: //Curved lens
+            dist = fsIn.TexCoords - vec2(.5f);
+	        r = length(dist);
+	        vec2 distortTexCoords = fsIn.TexCoords + dist * sin(r * r * 4.f) * r * .5f;
+	        if(distortTexCoords.x < 0 || distortTexCoords.x > 1 || distortTexCoords.y < 0 || distortTexCoords.y > 1){
+		        discard;
+	        }
+            FragColor = vec4(texture(screenTex, distortTexCoords).rgb, 1.f);
+            break;
+        case 5: //Sharpen kernel (sharpens each colour value by sampling all surrounding pixels)
+            ApplyKernel(offsets, float[](-1, -1, -1, -1, 9, -1, -1, -1, -1));
+            break;
+        case 6: //Blur kernel (vary blur amt over time for drunk effect, can use blur for smoothing colour values) //Because all values add up to 16, directly returning the combined sampled colors would result in an extremely bright color so we have to divide each value of the kernel by 16??
+            ApplyKernel(offsets, float[](.0625f, .125f, .0625f, .125f, .25f, .125f, .0625f, .125f, .0625f));
+            break;
+        default: //Edge-detection kernel (highlights all edges and darkens the rest)
+            ApplyKernel(offsets, float[](1.f, 1.f, 1.f, 1.f, -8.f, 1.f, 1.f, 1.f, 1.f));
     }
     if(lineariseDepth){ //shorten?? //gamma correction??
         float depthVal = colResult.r;

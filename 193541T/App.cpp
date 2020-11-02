@@ -98,7 +98,7 @@ void App::Update(const Cam& cam){
     }
 
     if(glfwGetKey(win, GLFW_KEY_3) && ppeTypeBT <= currFrame){
-        typePPE += (typePPE == 5 ? -5 : 1);
+        typePPE += (typePPE == 7 ? -7 : 1);
         ppeTypeBT = currFrame + .5f;
     }
 }
