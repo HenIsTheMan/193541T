@@ -73,7 +73,7 @@ void main(){
         case 5: //Sharpen kernel (sharpens each colour value by sampling all surrounding pixels)
             ApplyKernel(offsets, float[](-1, -1, -1, -1, 9, -1, -1, -1, -1));
             break;
-        case 6: //Blur kernel (vary blur amt over time for drunk effect, can use blur for smoothing colour values) //Because all values add up to 16, directly returning the combined sampled colors would result in an extremely bright color so we have to divide each value of the kernel by 16??
+        case 6: //Blur kernel (vary blur amt over time for drunk effect, can use blur for smoothing colour values) //Because all values add up to 16, directly returning the combined sampled colors would result in an extremely bright color so we have to divide each value of the kernel by 16
             ApplyKernel(offsets, float[](.0625f, .125f, .0625f, .125f, .25f, .125f, .0625f, .125f, .0625f));
             break;
         default: //Edge-detection kernel (highlights all edges and darkens the rest)
